@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -18,6 +18,7 @@ import * as z from 'zod';
 import { useAuthStore } from '../store/useAuthStore';
 import { api } from '../services/api';
 import { Theme } from '../constants/theme';
+import { biometricService } from '../services/biometricService';
 import { 
   CacaoIcon, 
   UserIcon, 
@@ -51,9 +52,11 @@ export const LoginScreen = ({ navigation }: any) => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isBiometricAvailable, setIsBiometricAvailable] = useState(false);
+  const [isBiometricConfigured, setIsBiometricConfigured] = useState(false);
   const setSession = useAuthStore((state) => state.setSession);
 
-  const { control, handleSubmit, formState: { errors } } = useForm<LoginForm>({
+  const { control, handleSubmit, setValue, formState: { errors } } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
       identifier: '',
@@ -61,6 +64,80 @@ export const LoginScreen = ({ navigation }: any) => {
       remember: false,
     }
   });
+
+  useEffect(() => {
+    const checkBiometrics = async () => {
+      const available = await biometricService.isBiometricsAvailable();
+      const configured = await biometricService.isBiometricsEnabled();
+      setIsBiometricAvailable(available);
+      setIsBiometricConfigured(configured);
+
+      // Prefill email if there's a saved email from biometrics configuration
+      const savedEmail = await biometricService.getSavedEmail();
+      if (savedEmail) {
+        setValue('identifier', savedEmail);
+      }
+
+      // Auto-trigger biometric authentication if enabled
+      if (available && configured) {
+        setTimeout(() => {
+          handleBiometricAuth();
+        }, 600);
+      }
+    };
+    checkBiometrics();
+  }, []);
+
+  const handleBiometricAuth = async () => {
+    setLoading(true);
+    setErrorMessage(null);
+    try {
+      const credentials = await biometricService.authenticate();
+      if (credentials) {
+        const response = await api.post('/auth/login', {
+          email: credentials.email,
+          password: credentials.password,
+        });
+
+        const { accessToken, refreshToken, user } = response.data;
+        await setSession(user, accessToken, refreshToken);
+        Alert.alert('¡Bienvenido!', `Hola, ${user.nombre}`);
+      }
+    } catch (error: any) {
+      if (error.error === 'cuenta_bloqueada') {
+        const retryAfter = error.retryAfter || 900;
+        const minutes = Math.ceil(retryAfter / 60);
+        setErrorMessage(`Cuenta bloqueada temporalmente. Intenta en ${minutes} min.`);
+      } else if (error.error === 'credenciales_invalidas') {
+        setErrorMessage('Credenciales biométricas inválidas. Por favor inicia sesión con tu contraseña.');
+        await biometricService.disableBiometrics();
+        setIsBiometricConfigured(false);
+      } else {
+        setErrorMessage(error.mensaje || 'Error al iniciar sesión con huella. Intente más tarde.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleBiometricPress = async () => {
+    const available = await biometricService.isBiometricsAvailable();
+    if (!available) {
+      Alert.alert('Huella dactilar', 'La autenticación biométrica no está disponible o no hay huellas/rostros registrados en el dispositivo.');
+      return;
+    }
+
+    const configured = await biometricService.isBiometricsEnabled();
+    if (!configured) {
+      Alert.alert(
+        'Huella no configurada',
+        'Por favor, inicie sesión con su correo y contraseña primero para activar el inicio con huella.'
+      );
+      return;
+    }
+
+    await handleBiometricAuth();
+  };
 
   const onSubmit = async (data: LoginForm) => {
     setLoading(true);
@@ -72,8 +149,51 @@ export const LoginScreen = ({ navigation }: any) => {
       });
 
       const { accessToken, refreshToken, user } = response.data;
-      await setSession(user, accessToken, refreshToken);
-      Alert.alert('¡Bienvenido!', `Hola, ${user.nombre}`);
+
+      // Check if we should propose enabling biometrics
+      const canUseBiometrics = await biometricService.isBiometricsAvailable();
+      const isAlreadyEnabled = await biometricService.isBiometricsEnabled();
+      const savedEmail = await biometricService.getSavedEmail();
+
+      if (canUseBiometrics && (!isAlreadyEnabled || savedEmail !== data.identifier)) {
+        const title = savedEmail && savedEmail !== data.identifier
+          ? '¿Reemplazar huella guardada?'
+          : '¿Activar inicio con huella?';
+        
+        const message = savedEmail && savedEmail !== data.identifier
+          ? `Se detectó otra cuenta configurada (${savedEmail}). ¿Desea reemplazarla con la cuenta actual (${data.identifier}) para el inicio con huella?`
+          : '¿Desea utilizar su huella dactilar para iniciar sesión de forma rápida en el futuro?';
+
+        Alert.alert(
+          title,
+          message,
+          [
+            {
+              text: 'No, gracias',
+              onPress: async () => {
+                await setSession(user, accessToken, refreshToken);
+                Alert.alert('¡Bienvenido!', `Hola, ${user.nombre}`);
+              },
+              style: 'cancel'
+            },
+            {
+              text: 'Activar',
+              onPress: async () => {
+                const enabled = await biometricService.enableBiometrics(data.identifier, data.password);
+                await setSession(user, accessToken, refreshToken);
+                if (enabled) {
+                  Alert.alert('¡Bienvenido!', `Hola, ${user.nombre}\n\nInicio de sesión con huella activado.`);
+                } else {
+                  Alert.alert('¡Bienvenido!', `Hola, ${user.nombre}`);
+                }
+              }
+            }
+          ]
+        );
+      } else {
+        await setSession(user, accessToken, refreshToken);
+        Alert.alert('¡Bienvenido!', `Hola, ${user.nombre}`);
+      }
     } catch (error: any) {
       if (error.error === 'cuenta_bloqueada') {
         const retryAfter = error.retryAfter || 900;
@@ -229,7 +349,7 @@ export const LoginScreen = ({ navigation }: any) => {
 
           {/* Alt Login Options */}
           <View style={styles.altButtonsRow}>
-            <TouchableOpacity style={styles.altButton} onPress={() => Alert.alert('Huella', 'Verificación biométrica no disponible.')}>
+            <TouchableOpacity style={styles.altButton} onPress={handleBiometricPress}>
               <FingerprintIcon color={Theme.colors.secondary} size={18} />
               <Text style={styles.altText}>Huella</Text>
             </TouchableOpacity>
@@ -238,6 +358,7 @@ export const LoginScreen = ({ navigation }: any) => {
               <Text style={styles.altText}>QR</Text>
             </TouchableOpacity>
           </View>
+
         </View>
 
         {/* Footer Navigation */}

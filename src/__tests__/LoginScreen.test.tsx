@@ -21,6 +21,18 @@ jest.mock('../services/api', () => ({
   },
 }));
 
+// Mock de biometricService
+jest.mock('../services/biometricService', () => ({
+  biometricService: {
+    isBiometricsAvailable: jest.fn().mockResolvedValue(false),
+    isBiometricsEnabled: jest.fn().mockResolvedValue(false),
+    getSavedEmail: jest.fn().mockResolvedValue(null),
+    enableBiometrics: jest.fn().mockResolvedValue(true),
+    disableBiometrics: jest.fn().mockResolvedValue(undefined),
+    authenticate: jest.fn().mockResolvedValue(null),
+  },
+}));
+
 describe('Pruebas de Validación del Formulario de Login', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -47,5 +59,29 @@ describe('Pruebas de Validación del Formulario de Login', () => {
       expect(getByText('Ingrese su correo o teléfono')).toBeTruthy();
       expect(getByText('La contraseña es requerida')).toBeTruthy();
     });
+  });
+
+  it('debe alertar al usuario si intenta usar la huella sin tenerla configurada', async () => {
+    const { biometricService } = require('../services/biometricService');
+    biometricService.isBiometricsAvailable.mockResolvedValueOnce(true);
+    biometricService.isBiometricsEnabled.mockResolvedValueOnce(false);
+    
+    const { Alert } = require('react-native');
+    const spyAlert = jest.spyOn(Alert, 'alert');
+
+    const { getByText } = render(
+      <LoginScreen navigation={mockNavigation} />
+    );
+
+    const biometricButton = getByText('Huella');
+    fireEvent.press(biometricButton);
+
+    await waitFor(() => {
+      expect(spyAlert).toHaveBeenCalledWith(
+        'Huella no configurada',
+        'Por favor, inicie sesión con su correo y contraseña primero para activar el inicio con huella.'
+      );
+    });
+    spyAlert.mockRestore();
   });
 });

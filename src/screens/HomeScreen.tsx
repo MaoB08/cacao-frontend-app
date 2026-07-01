@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, Alert } from 'react-native';
 import { useAuthStore } from '../store/useAuthStore';
 import { Theme } from '../constants/theme';
 import { FarmerIcon } from '../components/Icons';
+import { biometricService } from '../services/biometricService';
 
 import { useShallow } from 'zustand/react/shallow';
 
@@ -13,6 +14,38 @@ export const HomeScreen = () => {
       clearSession: state.clearSession,
     }))
   );
+
+  const [isBiometricAvailable, setIsBiometricAvailable] = useState(false);
+  const [isBiometricEnabled, setIsBiometricEnabled] = useState(false);
+
+  useEffect(() => {
+    const checkBiometrics = async () => {
+      const available = await biometricService.isBiometricsAvailable();
+      const enabled = await biometricService.isBiometricsEnabled();
+      setIsBiometricAvailable(available);
+      setIsBiometricEnabled(enabled);
+    };
+    checkBiometrics();
+  }, []);
+
+  const handleDisableBiometrics = () => {
+    Alert.alert(
+      'Desactivar Huella',
+      '¿Está seguro de que desea desactivar el inicio de sesión con huella dactilar?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { 
+          text: 'Desactivar', 
+          onPress: async () => {
+            await biometricService.disableBiometrics();
+            setIsBiometricEnabled(false);
+            Alert.alert('Desactivado', 'El inicio con huella dactilar ha sido desactivado.');
+          }, 
+          style: 'destructive' 
+        }
+      ]
+    );
+  };
 
   const handleSignOut = () => {
     Alert.alert(
@@ -50,6 +83,22 @@ export const HomeScreen = () => {
             <Text style={styles.infoLabel}>Rol asignado:</Text>
             <Text style={styles.infoValueBadge}>{user?.rol}</Text>
           </View>
+
+          {isBiometricAvailable && (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Huella dactilar:</Text>
+              {isBiometricEnabled ? (
+                <TouchableOpacity 
+                  style={styles.biometricBadgeActive}
+                  onPress={handleDisableBiometrics}
+                >
+                  <Text style={styles.biometricBadgeText}>Activo • Desactivar</Text>
+                </TouchableOpacity>
+              ) : (
+                <Text style={styles.infoValueDisabled}>Desactivado (Activa al iniciar sesión)</Text>
+              )}
+            </View>
+          )}
 
           <View style={styles.fincaBox}>
             <Text style={styles.fincaTitle}>Ubicación Finca Piloto</Text>
@@ -131,6 +180,24 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     fontWeight: '700',
     overflow: 'hidden',
+  },
+  biometricBadgeActive: {
+    backgroundColor: '#e8f5e9',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#c8e6c9',
+  },
+  biometricBadgeText: {
+    fontSize: 12,
+    color: '#2e7d32',
+    fontWeight: '700',
+  },
+  infoValueDisabled: {
+    fontSize: 13,
+    color: Theme.colors.outline,
+    fontWeight: '600',
   },
   fincaBox: {
     backgroundColor: Theme.colors.surfaceContainer,

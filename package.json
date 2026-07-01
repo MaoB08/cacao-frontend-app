@@ -9,6 +9,7 @@
     "@react-navigation/stack": "^7.3.3",
     "axios": "^1.7.9",
     "expo": "~54.0.8",
+    "expo-local-authentication": "^57.0.0",
     "expo-secure-store": "~15.0.8",
     "expo-status-bar": "~3.0.9",
     "react": "19.1.0",
