@@ -6,6 +6,10 @@ export interface User {
   nombre: string;
   email: string;
   rol: 'AGRICULTOR' | 'EXPERTO' | 'ADMIN';
+  telefono?: string;
+  departamento?: string;
+  municipio?: string;
+  nombreFinca?: string;
 }
 
 interface AuthState {

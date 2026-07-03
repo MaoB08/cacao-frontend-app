@@ -6,7 +6,7 @@ import { WarningIcon } from '../components/Icons';
 
 export const OfflineBanner = () => {
   const isConnected = useAuthStore((state) => state.isConnected);
-  const [fadeAnim] = React.useState(new Animated.Value(0));
+  const fadeAnim = React.useRef(new Animated.Value(0)).current;
 
   React.useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -14,7 +14,7 @@ export const OfflineBanner = () => {
       duration: 300,
       useNativeDriver: true,
     }).start();
-  }, [isConnected]);
+  }, [isConnected, fadeAnim]);
 
   if (isConnected) return null;
 

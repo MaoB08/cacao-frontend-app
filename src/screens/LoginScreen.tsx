@@ -43,7 +43,6 @@ const loginSchema = z.object({
       message: 'Ingrese un correo electrónico válido o número de teléfono'
     }),
   password: z.string().min(1, 'La contraseña es requerida'),
-  remember: z.boolean(),
 });
 
 type LoginForm = z.infer<typeof loginSchema>;
@@ -61,7 +60,6 @@ export const LoginScreen = ({ navigation }: any) => {
     defaultValues: {
       identifier: '',
       password: '',
-      remember: false,
     }
   });
 
@@ -307,22 +305,7 @@ export const LoginScreen = ({ navigation }: any) => {
             )}
           </View>
 
-          {/* Remember Me Switch */}
-          <View style={styles.rememberRow}>
-            <Controller
-              control={control}
-              name="remember"
-              render={({ field: { onChange, value } }) => (
-                <Switch
-                  value={value}
-                  onValueChange={onChange}
-                  trackColor={{ false: Theme.colors.outlineVariant, true: Theme.colors.primaryContainer }}
-                  thumbColor={value ? Theme.colors.primary : '#f4f3f4'}
-                />
-              )}
-            />
-            <Text style={styles.rememberLabel}>Recordar cuenta</Text>
-          </View>
+
 
           {/* Login Button */}
           <TouchableOpacity

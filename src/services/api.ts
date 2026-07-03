@@ -97,14 +97,15 @@ api.interceptors.response.use(
         const response = await axios.post(`${API_URL}/auth/refresh`, { refreshToken });
         const { accessToken: newAccessToken, refreshToken: newRefreshToken } = response.data;
 
-        // Actualizar tokens en store y SecureStore
-        await useAuthStore.getState().updateAccessToken(newAccessToken);
+        // Actualizar tokens en store y SecureStore sin hacer escrituras dobles
         if (newRefreshToken) {
           await useAuthStore.getState().setSession(
             useAuthStore.getState().user!,
             newAccessToken,
             newRefreshToken
           );
+        } else {
+          await useAuthStore.getState().updateAccessToken(newAccessToken);
         }
 
         processQueue(null, newAccessToken);

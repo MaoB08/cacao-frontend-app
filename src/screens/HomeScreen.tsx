@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, Alert } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, Alert, Platform } from 'react-native';
 import { useAuthStore } from '../store/useAuthStore';
 import { Theme } from '../constants/theme';
 import { FarmerIcon } from '../components/Icons';
@@ -101,8 +101,11 @@ export const HomeScreen = () => {
           )}
 
           <View style={styles.fincaBox}>
-            <Text style={styles.fincaTitle}>Ubicación Finca Piloto</Text>
-            <Text style={styles.fincaDetail}>Finca La Variante • Ocaña, Norte de Santander</Text>
+            <Text style={styles.fincaTitle}>Ubicación de Finca</Text>
+            <Text style={styles.fincaDetail}>
+              {user?.nombreFinca || 'Finca Piloto'}
+              {user?.municipio || user?.departamento ? ` • ${[user.municipio, user.departamento].filter(Boolean).join(', ')}` : ' • Ocaña, Norte de Santander'}
+            </Text>
           </View>
         </View>
 
@@ -118,6 +121,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Theme.colors.background,
+    paddingTop: Platform.OS === 'android' ? 24 : 0,
   },
   content: {
     flex: 1,

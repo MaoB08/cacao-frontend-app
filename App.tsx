@@ -11,7 +11,7 @@ import { LoginScreen } from './src/screens/LoginScreen';
 import { RegisterScreen } from './src/screens/RegisterScreen';
 import { ForgotPasswordScreen } from './src/screens/ForgotPasswordScreen';
 import { ResetPasswordScreen } from './src/screens/ResetPasswordScreen';
-import { HomeScreen } from './src/screens/HomeScreen';
+import { BottomTabNavigator } from './src/navigation/BottomTabNavigator';
 import { OfflineBanner } from './src/components/OfflineBanner';
 import { Theme } from './src/constants/theme';
 
@@ -66,8 +66,8 @@ export default function App() {
       <NavigationContainer theme={NavigationTheme}>
         <Stack.Navigator screenOptions={{ headerShown: false }}>
           {user ? (
-            // Ruta Protegida: El usuario ya inició sesión
-            <Stack.Screen name="Home" component={HomeScreen} />
+            // Ruta Protegida: El usuario ya inició sesión → Tabs
+            <Stack.Screen name="MainTabs" component={BottomTabNavigator} />
           ) : (
             // Rutas de Autenticación
             <>
