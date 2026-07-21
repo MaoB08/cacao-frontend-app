@@ -16,18 +16,11 @@ import { OfflineBanner } from './src/components/OfflineBanner';
 import { Theme } from './src/constants/theme';
 
 import { useShallow } from 'zustand/react/shallow';
+import { AccesibilidadProvider, useAccesibilidad } from './src/contexts/AccesibilidadContext';
 
 const Stack = createStackNavigator();
 
-const NavigationTheme = {
-  ...DefaultTheme,
-  colors: {
-    ...DefaultTheme.colors,
-    background: Theme.colors.background,
-  },
-};
-
-export default function App() {
+function AppContent() {
   const { user, isInitializing, loadSession, setConnected } = useAuthStore(
     useShallow((state) => ({
       user: state.user,
@@ -37,6 +30,8 @@ export default function App() {
     }))
   );
 
+  const { colores } = useAccesibilidad();
+
   // 1. Cargar la sesión desde Secure Store al iniciar la app
   useEffect(() => {
     loadSession();
@@ -45,7 +40,6 @@ export default function App() {
   // 2. Suscribirse a cambios en la conectividad a Internet
   useEffect(() => {
     const unsubscribe = NetInfo.addEventListener((state) => {
-      // NetInfo devuelve null/false si no hay internet
       setConnected(state.isConnected ?? false);
     });
 
@@ -55,21 +49,27 @@ export default function App() {
   // Pantalla de carga mientras se recupera la sesión persistida
   if (isInitializing) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={Theme.colors.primary} />
+      <View style={[styles.loadingContainer, { backgroundColor: colores.background }]}>
+        <ActivityIndicator size="large" color={colores.primary} />
       </View>
     );
   }
+
+  const NavigationTheme = {
+    ...DefaultTheme,
+    colors: {
+      ...DefaultTheme.colors,
+      background: colores.background,
+    },
+  };
 
   return (
     <SafeAreaProvider>
       <NavigationContainer theme={NavigationTheme}>
         <Stack.Navigator screenOptions={{ headerShown: false }}>
           {user ? (
-            // Ruta Protegida: El usuario ya inició sesión → Tabs
             <Stack.Screen name="MainTabs" component={BottomTabNavigator} />
           ) : (
-            // Rutas de Autenticación
             <>
               <Stack.Screen name="Login" component={LoginScreen} />
               <Stack.Screen name="Register" component={RegisterScreen} />
@@ -79,12 +79,19 @@ export default function App() {
           )}
         </Stack.Navigator>
         
-        {/* Banner de conectividad global */}
         <OfflineBanner />
         
-        <StatusBar style="dark" />
+        <StatusBar style="dark" translucent backgroundColor="transparent" />
       </NavigationContainer>
     </SafeAreaProvider>
+  );
+}
+
+export default function App() {
+  return (
+    <AccesibilidadProvider>
+      <AppContent />
+    </AccesibilidadProvider>
   );
 }
 

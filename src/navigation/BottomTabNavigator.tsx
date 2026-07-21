@@ -10,9 +10,11 @@ import {
 import { DashboardAgricultorScreen } from '../screens/DashboardAgricultorScreen';
 import { DashboardExpertoScreen } from '../screens/DashboardExpertoScreen';
 import { PlaceholderScreen } from '../screens/PlaceholderScreen';
-import { HomeScreen } from '../screens/HomeScreen';
+import { PerfilStackNavigator } from './PerfilStackNavigator';
 
 import { useShallow } from 'zustand/react/shallow';
+import { useAccesibilidad } from '../contexts/AccesibilidadContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const Tab = createBottomTabNavigator();
 
@@ -25,17 +27,35 @@ export const BottomTabNavigator = () => {
   const { user } = useAuthStore(
     useShallow((state) => ({ user: state.user }))
   );
+  const { colores, escalaTexto } = useAccesibilidad();
+  const insets = useSafeAreaInsets();
 
   const isExperto = user?.rol === 'EXPERTO';
+
+  const bottomPadding = insets.bottom > 0 ? insets.bottom : 12;
+  const tabBarHeight = 60 + bottomPadding;
 
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarStyle: styles.tabBar,
-        tabBarActiveTintColor: Theme.colors.primary,
-        tabBarInactiveTintColor: Theme.colors.outline,
-        tabBarLabelStyle: styles.tabLabel,
+        tabBarStyle: [
+          styles.tabBar,
+          {
+            backgroundColor: colores.surfaceContainerLowest,
+            borderTopColor: colores.outlineVariant,
+            height: tabBarHeight,
+            paddingBottom: bottomPadding,
+          }
+        ],
+        tabBarActiveTintColor: colores.primary,
+        tabBarInactiveTintColor: colores.outline,
+        tabBarLabelStyle: [
+          styles.tabLabel,
+          {
+            fontSize: 10 * escalaTexto,
+          }
+        ],
         tabBarItemStyle: styles.tabItem,
       }}
     >
@@ -44,7 +64,12 @@ export const BottomTabNavigator = () => {
         component={isExperto ? DashboardExpertoScreen : DashboardAgricultorScreen}
         options={{
           tabBarIcon: ({ color, focused }) => (
-            <View style={[styles.iconWrapper, focused && styles.activeIconWrapper]}>
+            <View 
+              style={[
+                styles.iconWrapper, 
+                focused && [styles.activeIconWrapper, { backgroundColor: colores.primary, shadowColor: colores.primary }]
+              ]}
+            >
               <HomeIcon color={focused ? '#ffffff' : color} size={20} />
             </View>
           ),
@@ -55,7 +80,12 @@ export const BottomTabNavigator = () => {
         component={CamaraTab}
         options={{
           tabBarIcon: ({ color, focused }) => (
-            <View style={[styles.iconWrapper, focused && styles.activeIconWrapper]}>
+            <View 
+              style={[
+                styles.iconWrapper, 
+                focused && [styles.activeIconWrapper, { backgroundColor: colores.primary, shadowColor: colores.primary }]
+              ]}
+            >
               <CameraIcon color={focused ? '#ffffff' : color} size={20} />
             </View>
           ),
@@ -66,7 +96,12 @@ export const BottomTabNavigator = () => {
         component={MapaTab}
         options={{
           tabBarIcon: ({ color, focused }) => (
-            <View style={[styles.iconWrapper, focused && styles.activeIconWrapper]}>
+            <View 
+              style={[
+                styles.iconWrapper, 
+                focused && [styles.activeIconWrapper, { backgroundColor: colores.primary, shadowColor: colores.primary }]
+              ]}
+            >
               <MapIcon color={focused ? '#ffffff' : color} size={20} />
             </View>
           ),
@@ -77,7 +112,12 @@ export const BottomTabNavigator = () => {
         component={CatalogoTab}
         options={{
           tabBarIcon: ({ color, focused }) => (
-            <View style={[styles.iconWrapper, focused && styles.activeIconWrapper]}>
+            <View 
+              style={[
+                styles.iconWrapper, 
+                focused && [styles.activeIconWrapper, { backgroundColor: colores.primary, shadowColor: colores.primary }]
+              ]}
+            >
               <BookIcon color={focused ? '#ffffff' : color} size={20} />
             </View>
           ),
@@ -85,10 +125,15 @@ export const BottomTabNavigator = () => {
       />
       <Tab.Screen
         name="Perfil"
-        component={HomeScreen}
+        component={PerfilStackNavigator}
         options={{
           tabBarIcon: ({ color, focused }) => (
-            <View style={[styles.iconWrapper, focused && styles.activeIconWrapper]}>
+            <View 
+              style={[
+                styles.iconWrapper, 
+                focused && [styles.activeIconWrapper, { backgroundColor: colores.primary, shadowColor: colores.primary }]
+              ]}
+            >
               <ProfileIcon color={focused ? '#ffffff' : color} size={20} />
             </View>
           ),
@@ -103,9 +148,7 @@ const styles = StyleSheet.create({
     backgroundColor: Theme.colors.surfaceContainerLowest,
     borderTopWidth: 1,
     borderTopColor: Theme.colors.outlineVariant,
-    height: Platform.OS === 'ios' ? 92 : 72,
     paddingTop: 6,
-    paddingBottom: Platform.OS === 'ios' ? 24 : 10,
     shadowColor: '#5c403a',
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.08,
