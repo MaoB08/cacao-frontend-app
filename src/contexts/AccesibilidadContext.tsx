@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { safeStorage } from '../utils/safeStorage';
 import { Theme } from '../constants/theme';
 
 export type TamanoTextoType = 'pequeno' | 'normal' | 'grande';
@@ -36,7 +36,7 @@ export const AccesibilidadProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     const loadConfig = async () => {
       try {
-        const stored = await AsyncStorage.getItem(STORAGE_KEY);
+        const stored = await safeStorage.getItem(STORAGE_KEY);
         if (stored) {
           setConfig(JSON.parse(stored));
         }
@@ -50,7 +50,7 @@ export const AccesibilidadProvider: React.FC<{ children: React.ReactNode }> = ({
   const saveConfig = async (newConfig: AccesibilidadConfig) => {
     try {
       setConfig(newConfig);
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(newConfig));
+      await safeStorage.setItem(STORAGE_KEY, JSON.stringify(newConfig));
     } catch (e) {
       console.warn('Error al guardar accesibilidad', e);
     }

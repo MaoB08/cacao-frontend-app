@@ -3,10 +3,16 @@ import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAccesibilidad } from '../contexts/AccesibilidadContext';
 import { ChevronLeftIcon } from '../components/Icons';
+import { PagosVentasScreen } from './PagosVentasScreen';
 
 export const AyudaCategoriaScreen = ({ route, navigation }: any) => {
   const { categoriaNombre } = route.params || { categoriaNombre: 'Ayuda' };
   const { escalaTexto, colores, botonesGrandes } = useAccesibilidad();
+
+  // Redirección inteligente a la pantalla de Pagos y Ventas
+  if (categoriaNombre && categoriaNombre.toLowerCase().includes('pago')) {
+    return <PagosVentasScreen navigation={navigation} />;
+  }
 
   const getScaledFont = (size: number) => size * escalaTexto;
 

@@ -17,6 +17,7 @@ import {
   UserIcon,
   ChatBubbleIcon,
   HelpCircleIcon,
+  DollarIcon,
   TrendUpIcon,
   BellIcon,
   GearIcon,
@@ -66,6 +67,12 @@ export const DrawerMenuModal: React.FC<DrawerMenuModalProps> = ({
       title: 'Centro de Ayuda',
       icon: (color: string) => <HelpCircleIcon color={color} size={22} />,
       action: () => navigation.navigate('CentroAyuda'),
+    },
+    {
+      id: 'PagosVentas',
+      title: 'Pagos y Ventas de Cacao',
+      icon: (color: string) => <DollarIcon color={color} size={22} />,
+      action: () => navigation.navigate('PagosVentas'),
     },
     {
       id: 'DiagnosticosResumen',

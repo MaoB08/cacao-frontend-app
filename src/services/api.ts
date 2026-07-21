@@ -1,8 +1,34 @@
 import axios from 'axios';
+import { Platform } from 'react-native';
 import { useAuthStore } from '../store/useAuthStore';
 
-// URL del backend configurada en .env
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://10.0.2.2:8080/api/v1';
+// URL del backend configurada dinámicamente (Soporta Dispositivos Físicos en Wi-Fi, Web, Android e iOS)
+const getApiUrl = () => {
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    return process.env.EXPO_PUBLIC_API_URL;
+  }
+
+  try {
+    const Constants = require('expo-constants').default;
+    const hostUri = Constants?.expoConfig?.hostUri || Constants?.manifest2?.extra?.expoGo?.developer?.tool;
+    if (hostUri) {
+      const hostIp = hostUri.split(':')[0];
+      if (hostIp && hostIp !== 'localhost' && hostIp !== '127.0.0.1') {
+        return `http://${hostIp}:8080/api/v1`;
+      }
+    }
+  } catch (e) {
+    // Ignorar si no se puede cargar expo-constants
+  }
+
+  if (Platform.OS === 'web' || Platform.OS === 'ios') {
+    return 'http://localhost:8080/api/v1';
+  }
+  return 'http://10.0.2.2:8080/api/v1';
+};
+
+const API_URL = getApiUrl();
+console.log('🔗 Conectando al Backend CacaoCare en:', API_URL);
 
 export const api = axios.create({
   baseURL: API_URL,

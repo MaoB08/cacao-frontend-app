@@ -7,6 +7,7 @@ import { ChatExpertoScreen } from '../screens/ChatExpertoScreen';
 import { ConfiguracionScreen } from '../screens/ConfiguracionScreen';
 import { CentroAyudaScreen } from '../screens/CentroAyudaScreen';
 import { AyudaCategoriaScreen } from '../screens/AyudaCategoriaScreen';
+import { PagosVentasScreen } from '../screens/PagosVentasScreen';
 
 const Stack = createStackNavigator();
 
@@ -20,6 +21,7 @@ export const PerfilStackNavigator = () => {
       <Stack.Screen name="Configuracion" component={ConfiguracionScreen} />
       <Stack.Screen name="CentroAyuda" component={CentroAyudaScreen} />
       <Stack.Screen name="AyudaCategoria" component={AyudaCategoriaScreen} />
+      <Stack.Screen name="PagosVentas" component={PagosVentasScreen} />
     </Stack.Navigator>
   );
 };
