@@ -1,19 +1,33 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Image, ScrollView, RefreshControl, Alert } from 'react-native';
+import { 
+  StyleSheet, Text, View, TouchableOpacity, Image, ScrollView, 
+  RefreshControl, Alert, Modal, TextInput, ActivityIndicator, KeyboardAvoidingView, Platform 
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { usePerfilStore } from '../store/usePerfilStore';
 import { useAccesibilidad } from '../contexts/AccesibilidadContext';
 import { 
   SyncIcon, BellIcon, PencilIcon, GridIcon, TrendUpIcon, 
-  ChevronRightIcon, GearIcon, HelpCircleIcon, LogoutIcon, ChatBubbleIcon
+  ChevronRightIcon, GearIcon, HelpCircleIcon, LogoutIcon, ChatBubbleIcon,
+  DollarIcon, CameraIcon
 } from '../components/Icons';
 import { ProfileSkeleton } from '../components/SkeletonLoader';
 
 export const PerfilScreen = ({ navigation }: any) => {
-  const { perfil, loading, fetchPerfil, updateFoto, logout } = usePerfilStore();
+  const { perfil, loading, fetchPerfil, updateFoto, updatePerfil, logout } = usePerfilStore();
   const { escalaTexto, escalaBoton, colores, botonesGrandes } = useAccesibilidad();
   const [refreshing, setRefreshing] = useState(false);
+
+  // Estados para el Modal de Edición de Perfil
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editNombre, setEditNombre] = useState('');
+  const [editTelefono, setEditTelefono] = useState('');
+  const [editFincaNombre, setEditFincaNombre] = useState('');
+  const [editDepartamento, setEditDepartamento] = useState('');
+  const [editMunicipio, setEditMunicipio] = useState('');
+  const [editHectareas, setEditHectareas] = useState('');
+  const [guardando, setGuardando] = useState(false);
 
   const loadData = useCallback(async () => {
     await fetchPerfil();
@@ -29,11 +43,98 @@ export const PerfilScreen = ({ navigation }: any) => {
     setRefreshing(false);
   };
 
-  const handleChangePhoto = async () => {
+  const handleOpenEditModal = () => {
+    if (perfil) {
+      setEditNombre(perfil.nombre || '');
+      setEditTelefono(perfil.telefono || '');
+      setEditFincaNombre(perfil.finca?.nombre || '');
+      setEditDepartamento(perfil.finca?.departamento || '');
+      setEditMunicipio(perfil.finca?.municipio || '');
+      setEditHectareas(perfil.finca?.hectareas?.toString() || '');
+      setEditModalVisible(true);
+    }
+  };
+
+  const handleSavePerfil = async () => {
+    if (!editNombre.trim()) {
+      Alert.alert('Error', 'El nombre es obligatorio.');
+      return;
+    }
+
+    setGuardando(true);
+    try {
+      await updatePerfil({
+        nombre: editNombre,
+        telefono: editTelefono,
+        finca: {
+          nombre: editFincaNombre,
+          departamento: editDepartamento,
+          municipio: editMunicipio,
+          hectareas: parseFloat(editHectareas) || 0,
+        }
+      });
+      setEditModalVisible(false);
+      Alert.alert('¡Éxito!', 'Perfil actualizado correctamente.');
+    } catch (err) {
+      console.warn('Error al guardar perfil', err);
+      Alert.alert('Error', 'Hubo un error al actualizar los datos.');
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  const handleChangePhoto = () => {
+    Alert.alert(
+      'Foto de Perfil',
+      'Elige una opción para cambiar tu foto de perfil:',
+      [
+        {
+          text: 'Tomar Foto 📸',
+          onPress: handleTakePhoto,
+        },
+        {
+          text: 'Seleccionar de Galería 🖼️',
+          onPress: handleChooseFromGallery,
+        },
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+        },
+      ]
+    );
+  };
+
+  const handleTakePhoto = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert(
+        'Permiso Requerido',
+        'Necesitamos permisos de acceso a la cámara para tomar una foto de perfil.'
+      );
+      return;
+    }
+
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+      });
+
+      if (!result.canceled && result.assets && result.assets[0]) {
+        await updateFoto(result.assets[0].uri);
+      }
+    } catch (err) {
+      console.warn('Error al tomar foto', err);
+      Alert.alert('Error', 'Hubo un error al tomar la foto.');
+    }
+  };
+
+  const handleChooseFromGallery = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert(
-        'Permiso Requerido', 
+        'Permiso Requerido',
         'Necesitamos permisos de acceso a la galería para cambiar tu foto de perfil.'
       );
       return;
@@ -67,7 +168,6 @@ export const PerfilScreen = ({ navigation }: any) => {
           style: 'destructive',
           onPress: async () => {
             await logout();
-            // La navegación se reseteará automáticamente en App.tsx al ver user = null
           }
         }
       ]
@@ -134,14 +234,27 @@ export const PerfilScreen = ({ navigation }: any) => {
               </View>
             )}
             <View style={[styles.editBadge, { backgroundColor: colores.primary }]}>
-              <PencilIcon color="#ffffff" size={14} />
+              <CameraIcon color="#ffffff" size={14} />
             </View>
           </TouchableOpacity>
 
-          <Text style={[styles.name, { fontSize: getScaledFont(22), color: colores.onSurface }]}>
-            {p.nombre}
-          </Text>
-          <Text style={[styles.email, { fontSize: getScaledFont(14), color: colores.onSurfaceVariant }]}>
+          <View style={styles.nameRow}>
+            <Text style={[styles.name, { fontSize: getScaledFont(22), color: colores.onSurface }]}>
+              {p.nombre}
+            </Text>
+            <TouchableOpacity onPress={handleOpenEditModal} style={styles.editProfileIconBtn}>
+              <PencilIcon color={colores.primary} size={18} />
+            </TouchableOpacity>
+          </View>
+
+          {p.finca?.nombre ? (
+            <Text style={[styles.locationText, { fontSize: getScaledFont(14), color: colores.primary }]}>
+              📍 {p.finca.nombre}
+              {p.finca.municipio || p.finca.departamento ? ` (${p.finca.municipio}${p.finca.municipio && p.finca.departamento ? ', ' : ''}${p.finca.departamento})` : ''}
+            </Text>
+          ) : null}
+
+          <Text style={[styles.email, { fontSize: getScaledFont(13), color: colores.onSurfaceVariant, marginTop: 4 }]}>
             {p.email}
           </Text>
         </View>
@@ -168,6 +281,25 @@ export const PerfilScreen = ({ navigation }: any) => {
             </Text>
           </View>
         </View>
+
+        {/* Bento Card 3: Ventas de Cacao e Ingresos */}
+        <TouchableOpacity
+          style={[styles.salesBentoCard, { backgroundColor: colores.surfaceContainerLowest, borderColor: colores.outlineVariant }]}
+          onPress={() => navigation.navigate('CentroAyuda', { screen: 'PagosVentas' })}
+        >
+          <View style={styles.salesBentoLeft}>
+            <DollarIcon color={colores.primary} size={26} />
+            <View style={styles.salesBentoTexts}>
+              <Text style={[styles.salesBentoTitle, { fontSize: getScaledFont(15), color: colores.onSurface }]}>
+                Precios e Ingresos del Cacao
+              </Text>
+              <Text style={[styles.salesBentoDesc, { fontSize: getScaledFont(12), color: colores.onSurfaceVariant }]}>
+                Consulta precios al día, tendencias e ingresos estimados.
+              </Text>
+            </View>
+          </View>
+          <ChevronRightIcon color={colores.outline} size={18} />
+        </TouchableOpacity>
 
         {/* Health status banner */}
         <TouchableOpacity
@@ -257,6 +389,127 @@ export const PerfilScreen = ({ navigation }: any) => {
           Versión {p.versionApp}
         </Text>
       </ScrollView>
+
+      {/* Modal de Edición de Perfil */}
+      <Modal
+        visible={editModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setEditModalVisible(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
+          <View style={[styles.modalContent, { backgroundColor: colores.background }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { fontSize: getScaledFont(18), color: colores.onSurface }]}>
+                Editar Datos de la Finca
+              </Text>
+              <TouchableOpacity onPress={() => setEditModalVisible(false)}>
+                <Text style={[styles.modalCloseText, { color: colores.outline }]}>Cerrar</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView contentContainerStyle={styles.modalScroll}>
+              <View style={styles.inputGroup}>
+                <Text style={[styles.inputLabel, { fontSize: getScaledFont(14), color: colores.onSurfaceVariant }]}>
+                  Nombre Completo
+                </Text>
+                <TextInput
+                  style={[styles.input, { borderColor: colores.outlineVariant, color: colores.onSurface, fontSize: getScaledFont(15) }]}
+                  value={editNombre}
+                  onChangeText={setEditNombre}
+                  placeholder="Tu nombre completo"
+                  placeholderTextColor={colores.outline}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={[styles.inputLabel, { fontSize: getScaledFont(14), color: colores.onSurfaceVariant }]}>
+                  Teléfono de Contacto
+                </Text>
+                <TextInput
+                  style={[styles.input, { borderColor: colores.outlineVariant, color: colores.onSurface, fontSize: getScaledFont(15) }]}
+                  value={editTelefono}
+                  onChangeText={setEditTelefono}
+                  keyboardType="phone-pad"
+                  placeholder="Ej: +57 300 123 4567"
+                  placeholderTextColor={colores.outline}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={[styles.inputLabel, { fontSize: getScaledFont(14), color: colores.onSurfaceVariant }]}>
+                  Nombre de la Finca
+                </Text>
+                <TextInput
+                  style={[styles.input, { borderColor: colores.outlineVariant, color: colores.onSurface, fontSize: getScaledFont(15) }]}
+                  value={editFincaNombre}
+                  onChangeText={setEditFincaNombre}
+                  placeholder="Ej: Finca La Esperanza"
+                  placeholderTextColor={colores.outline}
+                />
+              </View>
+
+              <View style={styles.inputRow}>
+                <View style={[styles.inputGroup, { flex: 1 }]}>
+                  <Text style={[styles.inputLabel, { fontSize: getScaledFont(14), color: colores.onSurfaceVariant }]}>
+                    Departamento
+                  </Text>
+                  <TextInput
+                    style={[styles.input, { borderColor: colores.outlineVariant, color: colores.onSurface, fontSize: getScaledFont(15) }]}
+                    value={editDepartamento}
+                    onChangeText={setEditDepartamento}
+                    placeholder="Ej: Huila"
+                    placeholderTextColor={colores.outline}
+                  />
+                </View>
+                <View style={[styles.inputGroup, { flex: 1 }]}>
+                  <Text style={[styles.inputLabel, { fontSize: getScaledFont(14), color: colores.onSurfaceVariant }]}>
+                    Municipio
+                  </Text>
+                  <TextInput
+                    style={[styles.input, { borderColor: colores.outlineVariant, color: colores.onSurface, fontSize: getScaledFont(15) }]}
+                    value={editMunicipio}
+                    onChangeText={setEditMunicipio}
+                    placeholder="Ej: Rivera"
+                    placeholderTextColor={colores.outline}
+                  />
+                </View>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={[styles.inputLabel, { fontSize: getScaledFont(14), color: colores.onSurfaceVariant }]}>
+                  Hectáreas Cultivadas
+                </Text>
+                <TextInput
+                  style={[styles.input, { borderColor: colores.outlineVariant, color: colores.onSurface, fontSize: getScaledFont(15) }]}
+                  value={editHectareas}
+                  onChangeText={setEditHectareas}
+                  keyboardType="numeric"
+                  placeholder="Ej: 5.5"
+                  placeholderTextColor={colores.outline}
+                />
+              </View>
+
+              <TouchableOpacity
+                style={[styles.saveBtn, { backgroundColor: colores.primary, height: botonesGrandes ? 64 : 48 }]}
+                onPress={handleSavePerfil}
+                disabled={guardando}
+              >
+                {guardando ? (
+                  <ActivityIndicator color="#ffffff" />
+                ) : (
+                  <Text style={[styles.saveBtnText, { fontSize: getScaledFont(16) }]}>
+                    Guardar Cambios
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -313,12 +566,26 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#ffffff',
   },
-  name: { fontWeight: '800', marginBottom: 4 },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  name: { fontWeight: '800' },
+  editProfileIconBtn: {
+    padding: 4,
+  },
+  locationText: {
+    fontWeight: '600',
+    marginTop: 2,
+  },
   email: { fontWeight: '500' },
   bentoGrid: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 16,
+    marginBottom: 12,
   },
   bentoCard: {
     flex: 1,
@@ -334,6 +601,37 @@ const styles = StyleSheet.create({
   },
   bentoValue: { fontWeight: '800', marginTop: 8, marginBottom: 2 },
   bentoLabel: { fontWeight: '600' },
+  salesBentoCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderRadius: 24,
+    borderWidth: 1,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  salesBentoLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  salesBentoTexts: {
+    flex: 1,
+  },
+  salesBentoTitle: {
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  salesBentoDesc: {
+    fontWeight: '500',
+    lineHeight: 16,
+  },
   healthBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -387,4 +685,69 @@ const styles = StyleSheet.create({
   },
   logoutText: { color: '#ba1a1a', fontWeight: '700' },
   versionLabel: { textAlign: 'center', fontWeight: '500' },
+
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingTop: 16,
+    paddingHorizontal: 20,
+    maxHeight: '85%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0, 0, 0, 0.05)',
+  },
+  modalTitle: {
+    fontWeight: '800',
+  },
+  modalCloseText: {
+    fontWeight: '700',
+  },
+  modalScroll: {
+    paddingVertical: 20,
+  },
+  inputGroup: {
+    marginBottom: 16,
+  },
+  inputRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  inputLabel: {
+    fontWeight: '700',
+    marginBottom: 6,
+  },
+  input: {
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    height: 48,
+    fontWeight: '600',
+  },
+  saveBtn: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 24,
+    marginTop: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  saveBtnText: {
+    color: '#ffffff',
+    fontWeight: '700',
+  },
 });

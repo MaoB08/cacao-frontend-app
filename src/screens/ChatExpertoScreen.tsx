@@ -13,10 +13,12 @@ import {
 import { ExpertosListSkeleton } from '../components/SkeletonLoader';
 import { DrawerMenuModal } from '../components/DrawerMenuModal';
 
-export const ChatExpertoScreen = ({ navigation }: any) => {
+export const ChatExpertoScreen = ({ route, navigation }: any) => {
   const { expertos, especialidades, loading, fetchExpertos, fetchEspecialidades, iniciarChat } = useExpertosStore();
   const { perfil } = usePerfilStore();
   const { escalaTexto, escalaBoton, colores, botonesGrandes } = useAccesibilidad();
+
+  const diagnosticoAdjunto = route?.params?.diagnosticoAdjunto;
 
   const [search, setSearch] = useState('');
   const [selectedSpec, setSelectedSpec] = useState('Todos');

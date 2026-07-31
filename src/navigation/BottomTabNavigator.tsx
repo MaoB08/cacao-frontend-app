@@ -11,6 +11,7 @@ import { DashboardAgricultorScreen } from '../screens/DashboardAgricultorScreen'
 import { DashboardExpertoScreen } from '../screens/DashboardExpertoScreen';
 import { PlaceholderScreen } from '../screens/PlaceholderScreen';
 import { PerfilStackNavigator } from './PerfilStackNavigator';
+import { CamaraStackNavigator } from './CamaraStackNavigator';
 
 import { useShallow } from 'zustand/react/shallow';
 import { useAccesibilidad } from '../contexts/AccesibilidadContext';
@@ -19,7 +20,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 const Tab = createBottomTabNavigator();
 
 // Wrapper components for placeholder tabs
-const CamaraTab = () => <PlaceholderScreen title="Cámara" icon="📷" />;
 const MapaTab = () => <PlaceholderScreen title="Mapa" icon="🗺️" />;
 const CatalogoTab = () => <PlaceholderScreen title="Catálogo" icon="📖" />;
 
@@ -77,7 +77,7 @@ export const BottomTabNavigator = () => {
       />
       <Tab.Screen
         name="Cámara"
-        component={CamaraTab}
+        component={CamaraStackNavigator}
         options={{
           tabBarIcon: ({ color, focused }) => (
             <View 
