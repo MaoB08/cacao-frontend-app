@@ -12,6 +12,7 @@ import { DashboardExpertoScreen } from '../screens/DashboardExpertoScreen';
 import { PlaceholderScreen } from '../screens/PlaceholderScreen';
 import { PerfilStackNavigator } from './PerfilStackNavigator';
 import { CamaraStackNavigator } from './CamaraStackNavigator';
+import { MapaStackNavigator } from './MapaStackNavigator';
 
 import { useShallow } from 'zustand/react/shallow';
 import { useAccesibilidad } from '../contexts/AccesibilidadContext';
@@ -19,8 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const Tab = createBottomTabNavigator();
 
-// Wrapper components for placeholder tabs
-const MapaTab = () => <PlaceholderScreen title="Mapa" icon="🗺️" />;
+// Wrapper component for placeholder tab
 const CatalogoTab = () => <PlaceholderScreen title="Catálogo" icon="📖" />;
 
 export const BottomTabNavigator = () => {
@@ -93,7 +93,7 @@ export const BottomTabNavigator = () => {
       />
       <Tab.Screen
         name="Mapa"
-        component={MapaTab}
+        component={MapaStackNavigator}
         options={{
           tabBarIcon: ({ color, focused }) => (
             <View 
