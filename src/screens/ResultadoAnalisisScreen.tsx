@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
+    paddingHorizontal: 24,
     borderBottomWidth: 1,
   },
   backBtn: {
@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Montserrat',
   },
   contentPadding: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
     paddingTop: 16,
   },
   resultCard: {

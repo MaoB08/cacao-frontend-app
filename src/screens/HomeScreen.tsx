@@ -3,6 +3,7 @@ import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, Alert, Platform
 import { useAuthStore } from '../store/useAuthStore';
 import { Theme } from '../constants/theme';
 import { FarmerIcon } from '../components/Icons';
+import { CultivIALogo } from '../components/CultivIALogo';
 import { biometricService } from '../services/biometricService';
 
 import { useShallow } from 'zustand/react/shallow';
@@ -62,10 +63,10 @@ export const HomeScreen = () => {
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         <View style={styles.card}>
-          <View style={{ marginBottom: 12 }}>
-            <FarmerIcon color={Theme.colors.primary} size={64} />
+          <View style={{ marginBottom: 12, alignItems: 'center' }}>
+            <CultivIALogo size={88} />
           </View>
-          <Text style={styles.welcomeText}>¡Bienvenido a CacaoCare!</Text>
+          <Text style={styles.welcomeText}>¡Bienvenido a CultivIA!</Text>
           
           <View style={styles.divider} />
           

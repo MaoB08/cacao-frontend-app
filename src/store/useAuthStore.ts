@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import * as SecureStore from 'expo-secure-store';
+import { safeStorage } from '../utils/safeStorage';
 
 export interface User {
   id: string;
@@ -34,31 +34,31 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   setSession: async (user, accessToken, refreshToken) => {
     try {
-      await SecureStore.setItemAsync('accessToken', accessToken);
-      await SecureStore.setItemAsync('refreshToken', refreshToken);
-      await SecureStore.setItemAsync('user', JSON.stringify(user));
+      await safeStorage.setItem('accessToken', accessToken);
+      await safeStorage.setItem('refreshToken', refreshToken);
+      await safeStorage.setItem('user', JSON.stringify(user));
       set({ user, accessToken, refreshToken });
     } catch (e) {
-      console.error('Error saving session to SecureStore', e);
+      console.error('Error saving session to safeStorage', e);
     }
   },
 
   clearSession: async () => {
     try {
-      await SecureStore.deleteItemAsync('accessToken');
-      await SecureStore.deleteItemAsync('refreshToken');
-      await SecureStore.deleteItemAsync('user');
+      await safeStorage.removeItem('accessToken');
+      await safeStorage.removeItem('refreshToken');
+      await safeStorage.removeItem('user');
       set({ user: null, accessToken: null, refreshToken: null });
     } catch (e) {
-      console.error('Error clearing session from SecureStore', e);
+      console.error('Error clearing session from safeStorage', e);
     }
   },
 
   loadSession: async () => {
     try {
-      const accessToken = await SecureStore.getItemAsync('accessToken');
-      const refreshToken = await SecureStore.getItemAsync('refreshToken');
-      const userStr = await SecureStore.getItemAsync('user');
+      const accessToken = await safeStorage.getItem('accessToken');
+      const refreshToken = await safeStorage.getItem('refreshToken');
+      const userStr = await safeStorage.getItem('user');
       
       if (accessToken && refreshToken && userStr) {
         set({ 
@@ -71,7 +71,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         set({ isInitializing: false });
       }
     } catch (e) {
-      console.error('Error loading session from SecureStore', e);
+      console.error('Error loading session from safeStorage', e);
       set({ isInitializing: false });
     }
   },
@@ -82,10 +82,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   updateAccessToken: async (accessToken) => {
     try {
-      await SecureStore.setItemAsync('accessToken', accessToken);
+      await safeStorage.setItem('accessToken', accessToken);
       set({ accessToken });
     } catch (e) {
-      console.error('Error updating accessToken in SecureStore', e);
+      console.error('Error updating accessToken in safeStorage', e);
     }
   }
 }));

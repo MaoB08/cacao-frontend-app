@@ -18,6 +18,7 @@ import {
   SparklesIcon,
   CacaoIcon,
 } from '../components/Icons';
+import { CultivIALogo } from '../components/CultivIALogo';
 
 export const CamaraScreen = ({ navigation }: any) => {
   const { escalaTexto, colores, botonesGrandes } = useAccesibilidad();
@@ -103,7 +104,7 @@ export const CamaraScreen = ({ navigation }: any) => {
         {/* Header */}
         <View style={styles.header}>
           <View style={[styles.logoBadge, { backgroundColor: colores.surfaceContainer }]}>
-            <CacaoIcon color={colores.primary} size={28} />
+            <CultivIALogo size={40} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={[styles.title, { fontSize: getScaledFont(20), color: colores.primary }]}>
@@ -249,7 +250,7 @@ export const CamaraScreen = ({ navigation }: any) => {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  scrollContent: { paddingHorizontal: 20, paddingBottom: 40, paddingTop: 12 },
+  scrollContent: { paddingHorizontal: 24, paddingBottom: 40, paddingTop: 12 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

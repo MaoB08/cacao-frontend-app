@@ -7,7 +7,7 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import MapView, { Polygon, Marker, PROVIDER_GOOGLE, Region } from 'react-native-maps';
+import MapView, { Polygon, Marker, Region } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -168,7 +168,7 @@ export const MapaMainScreen = () => {
       <MapView
         ref={mapRef}
         style={styles.map}
-        provider={PROVIDER_GOOGLE}
+
         mapType={mapType}
         initialRegion={defaultRegion}
         showsUserLocation
@@ -338,7 +338,7 @@ const styles = StyleSheet.create({
   },
   fabLocation: {
     position: 'absolute',
-    right: 16,
+    right: 24,
     width: 48,
     height: 48,
     borderRadius: 24,
@@ -352,7 +352,7 @@ const styles = StyleSheet.create({
   },
   fabCreate: {
     position: 'absolute',
-    right: 16,
+    right: 24,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 18,

@@ -33,6 +33,7 @@ import {
   ArrowRightIcon,
   CheckIcon,
 } from '../components/Icons';
+import { CultivIALogo } from '../components/CultivIALogo';
 
 const DEPARTAMENTO_COLOMBIA = 'Norte de Santander';
 const MUNICIPIOS_CATATUMBO = [
@@ -55,7 +56,7 @@ const registerSchema = z.object({
     .min(10, 'El teléfono colombiano debe tener 10 dígitos')
     .max(10, 'El teléfono debe tener 10 dígitos')
     .regex(/^\d+$/, 'Ingrese solo números (ej: 3101234567)'),
-  email: z.string().email('Ingrese un correo electrónico válido'),
+  email: z.string().email('Ingrese un correo electrónico válido').optional().or(z.literal('')),
   password: z.string()
     .min(8, 'Mínimo 8 caracteres')
     .regex(/[A-Z]/, 'Al menos una mayúscula')
@@ -110,7 +111,7 @@ export const RegisterScreen = ({ navigation }: any) => {
 
       const { accessToken, refreshToken, user } = response.data;
       await setSession(user, accessToken, refreshToken);
-      Alert.alert('Registro Exitoso', 'Bienvenido a CacaoCare.');
+      Alert.alert('Registro Exitoso', 'Bienvenido a CultivIA.');
     } catch (error: any) {
       if (error.error === 'email_ya_registrado') {
         setErrorMessage('El correo electrónico ya está registrado.');
@@ -132,7 +133,10 @@ export const RegisterScreen = ({ navigation }: any) => {
       <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>CacaoCare</Text>
+          <View style={styles.logoContainer}>
+            <CultivIALogo size={88} />
+          </View>
+          <Text style={styles.title}>CultivIA</Text>
           <Text style={styles.subtitle}>Únete a la plataforma para la gestión técnica del cacao.</Text>
         </View>
 
@@ -255,7 +259,7 @@ export const RegisterScreen = ({ navigation }: any) => {
 
           {/* Correo Electrónico */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Correo electrónico</Text>
+            <Text style={styles.label}>Correo electrónico (Opcional)</Text>
             <View style={[styles.inputWrapper, errors.email && styles.inputErrorBorder]}>
               <View style={styles.iconContainer}>
                 <EmailIcon color={Theme.colors.secondary} size={20} />
@@ -365,7 +369,7 @@ export const RegisterScreen = ({ navigation }: any) => {
               Ya tengo una cuenta
             </Text>
           </Text>
-          <Text style={styles.footerNote}>© 2026 CacaoCare - Impulsando el campo colombiano.</Text>
+          <Text style={styles.footerNote}>© 2026 CultivIA - Impulsando el campo colombiano.</Text>
         </View>
 
         {/* Modal Selector de Municipio */}
@@ -427,6 +431,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 36,
     marginTop: 20,
+  },
+  logoContainer: {
+    width: 96,
+    height: 96,
+    borderRadius: Theme.roundness.full,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#5c403a',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 4,
+    marginBottom: Theme.spacing.stackSm,
   },
   title: {
     fontFamily: 'System',

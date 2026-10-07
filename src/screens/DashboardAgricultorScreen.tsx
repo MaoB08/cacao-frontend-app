@@ -11,6 +11,7 @@ import {
   CacaoIcon, CameraIcon, AlertTriangleIcon, ActivityIcon,
   ThermometerIcon, LeafIcon,
 } from '../components/Icons';
+import { CultivIALogo } from '../components/CultivIALogo';
 import { useShallow } from 'zustand/react/shallow';
 import { useAccesibilidad } from '../contexts/AccesibilidadContext';
 
@@ -100,8 +101,8 @@ export const DashboardAgricultorScreen = ({ navigation }: any) => {
       <ScrollView
         contentContainerStyle={[
           styles.scroll,
-          { 
-            paddingHorizontal: 20 
+          {
+            paddingHorizontal: 24
           }
         ]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colores.primary} />}
@@ -110,14 +111,14 @@ export const DashboardAgricultorScreen = ({ navigation }: any) => {
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <Text style={[styles.farmerName, { fontSize: getScaledFont(24), color: colores.primary }]}>
-              {d.agricultor.nombre} 🌿
+              {d.agricultor.nombre}
             </Text>
             <Text style={[styles.fincaName, { fontSize: getScaledFont(14), color: colores.secondary }]}>
               {d.agricultor.nombreFinca}
             </Text>
           </View>
           <View style={[styles.headerIcon, { backgroundColor: colores.surfaceContainer }]}>
-            <CacaoIcon color={colores.primary} size={36} />
+            <CultivIALogo size={46} />
           </View>
         </View>
 
@@ -164,15 +165,15 @@ export const DashboardAgricultorScreen = ({ navigation }: any) => {
         </View>
 
         {/* Quick Action */}
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[
-            styles.scanButton, 
-            { 
+            styles.scanButton,
+            {
               backgroundColor: colores.primary,
               height: botonesGrandes ? 64 : 48,
               borderRadius: botonesGrandes ? 32 : 24,
             }
-          ]} 
+          ]}
           onPress={() => navigation.navigate('Cámara')}
         >
           <CameraIcon color="#ffffff" size={22} />
@@ -186,10 +187,10 @@ export const DashboardAgricultorScreen = ({ navigation }: any) => {
         {d.diagnosticosRecientes.map((diag) => {
           const sev = severityColors[diag.severidad] || severityColors.BAJA;
           return (
-            <View 
-              key={diag.id} 
+            <View
+              key={diag.id}
               style={[
-                styles.diagCard, 
+                styles.diagCard,
                 { backgroundColor: colores.surfaceContainerLowest, borderColor: colores.outlineVariant }
               ]}
             >
@@ -219,11 +220,11 @@ export const DashboardAgricultorScreen = ({ navigation }: any) => {
 };
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
+  container: {
+    flex: 1,
   },
-  scroll: { 
-    paddingBottom: 40, 
+  scroll: {
+    paddingBottom: 40,
   },
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
   loadingText: { marginTop: 16 },
@@ -235,9 +236,9 @@ const styles = StyleSheet.create({
   retryButtonText: { color: '#fff', fontWeight: '700' },
 
   header: {
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 24,
   },
   headerLeft: {
@@ -270,7 +271,7 @@ const styles = StyleSheet.create({
     padding: 14, borderRadius: Theme.roundness.default,
     borderWidth: 1,
   },
-  statLabelWide: { },
+  statLabelWide: {},
 
   scanButton: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,

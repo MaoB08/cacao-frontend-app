@@ -10,8 +10,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  FlatList,
 } from 'react-native';
-import MapView, { Polyline, Polygon, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Polyline, Polygon } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -35,6 +36,18 @@ import { Theme } from '../../constants/theme';
  * 5. Modal: asignar nombre del lote → guardar en backend
  * 6. Regresa al mapa principal con el lote visible
  */
+const VARIEDADES_CACAO = [
+  'CCN-51',
+  'ICS-1',
+  'ICS-39',
+  'ICS-60',
+  'ICS-95',
+  'TSH-565',
+  'Criollo',
+  'Nacional / Común',
+  'Otro',
+];
+
 export const CrearLoteScreen = () => {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
@@ -47,6 +60,12 @@ export const CrearLoteScreen = () => {
   const [fincaSeleccionada, setFincaSeleccionada] = useState<Finca | null>(null);
   const [coordenadasFinales, setCoordenadasFinales] = useState<Coordenada[] | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [variedadModalVisible, setVariedadModalVisible] = useState(false);
+  const [showCrearFincaModal, setShowCrearFincaModal] = useState(false);
+  const [nuevaFincaNombre, setNuevaFincaNombre] = useState('');
+  const [nuevaFincaDepto, setNuevaFincaDepto] = useState('');
+  const [nuevaFincaMuni, setNuevaFincaMuni] = useState('');
+  const [creandoFinca, setCreandoFinca] = useState(false);
   const [nombreLote, setNombreLote] = useState('');
   const [variedadCacao, setVariedadCacao] = useState('');
   const [guardando, setGuardando] = useState(false);
@@ -93,9 +112,42 @@ export const CrearLoteScreen = () => {
     }
   }, [tracker.coordenadas.length, tracker.estado]);
 
+  const handleCrearFinca = useCallback(async () => {
+    if (!nuevaFincaNombre.trim()) {
+      Alert.alert('Campo requerido', 'Ingresa el nombre de la finca.');
+      return;
+    }
+    try {
+      setCreandoFinca(true);
+      const nueva = await fincaService.crear({
+        nombre: nuevaFincaNombre.trim(),
+        departamento: nuevaFincaDepto.trim() || undefined,
+        municipio: nuevaFincaMuni.trim() || undefined,
+      });
+      setFincas((prev) => [...prev, nueva]);
+      setFincaSeleccionada(nueva);
+      setShowCrearFincaModal(false);
+      setNuevaFincaNombre('');
+      setNuevaFincaDepto('');
+      setNuevaFincaMuni('');
+      Alert.alert('✅ Finca registrada', `La finca "${nueva.nombre}" fue creada exitosamente.`);
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'No se pudo crear la finca');
+    } finally {
+      setCreandoFinca(false);
+    }
+  }, [nuevaFincaNombre, nuevaFincaDepto, nuevaFincaMuni]);
+
   const handleIniciar = useCallback(async () => {
     if (!fincaSeleccionada) {
-      Alert.alert('Sin finca', 'Primero debes crear una finca para poder registrar lotes.');
+      Alert.alert(
+        'Sin finca asignada',
+        'Necesitas registrar al menos una finca antes de delimitar un lote.',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Crear Finca', onPress: () => setShowCrearFincaModal(true) },
+        ]
+      );
       return;
     }
 
@@ -181,7 +233,7 @@ export const CrearLoteScreen = () => {
       <MapView
         ref={mapRef}
         style={styles.map}
-        provider={PROVIDER_GOOGLE}
+
         mapType="hybrid"
         initialRegion={defaultRegion}
         showsUserLocation
@@ -223,6 +275,26 @@ export const CrearLoteScreen = () => {
         onPress={tracker.estado === 'idle' ? () => navigation.goBack() : handleCancelar}
       >
         <Text style={styles.backIcon}>←</Text>
+      </TouchableOpacity>
+
+      {/* Badge / Selector de finca */}
+      <TouchableOpacity
+        style={[
+          styles.fincaBadge,
+          {
+            top: insets.top + 12,
+            backgroundColor: colores.surfaceContainerLowest,
+            borderColor: colores.outlineVariant,
+          },
+        ]}
+        onPress={() => setShowCrearFincaModal(true)}
+      >
+        <Text
+          numberOfLines={1}
+          style={[styles.fincaBadgeText, { color: colores.onSurface, fontSize: 13 * escalaTexto }]}
+        >
+          🏡 {fincaSeleccionada ? fincaSeleccionada.nombre : '+ Registrar finca'}
+        </Text>
       </TouchableOpacity>
 
       {/* Panel de control inferior */}
@@ -327,20 +399,30 @@ export const CrearLoteScreen = () => {
               autoFocus
             />
 
-            <TextInput
+            <TouchableOpacity
               style={[
-                styles.input,
+                styles.selectWrapper,
                 {
                   borderColor: colores.outlineVariant,
-                  color: colores.onSurface,
-                  fontSize: 15 * escalaTexto,
+                  backgroundColor: colores.surfaceContainer,
+                  marginBottom: 16,
                 },
               ]}
-              placeholder="Variedad de cacao (opcional)"
-              placeholderTextColor={colores.outline}
-              value={variedadCacao}
-              onChangeText={setVariedadCacao}
-            />
+              onPress={() => setVariedadModalVisible(true)}
+            >
+              <Text
+                style={[
+                  styles.selectText,
+                  {
+                    color: variedadCacao ? colores.onSurface : colores.outline,
+                    fontSize: 15 * escalaTexto,
+                  },
+                ]}
+              >
+                {variedadCacao || 'Variedad de cacao (opcional)'}
+              </Text>
+              <Text style={{ color: colores.outline, fontSize: 12 }}>▼</Text>
+            </TouchableOpacity>
 
             <View style={styles.modalActions}>
               <TouchableOpacity
@@ -369,6 +451,129 @@ export const CrearLoteScreen = () => {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* Modal Selector de Variedad */}
+      <Modal visible={variedadModalVisible} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colores.surfaceContainerLowest, maxHeight: '60%' }]}>
+            <Text style={[styles.modalTitle, { color: colores.primary, fontSize: 18 * escalaTexto, marginVertical: 15, textAlign: 'center', fontWeight: 'bold' }]}>
+              Variedades de Cacao en Colombia
+            </Text>
+            <FlatList
+              data={VARIEDADES_CACAO}
+              keyExtractor={(item) => item}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.modalItem}
+                  onPress={() => {
+                    setVariedadCacao(item);
+                    setVariedadModalVisible(false);
+                  }}
+                >
+                  <Text style={[styles.modalItemText, { color: colores.onSurface, fontSize: 16 * escalaTexto }]}>
+                    {item}
+                  </Text>
+                  {variedadCacao === item && <Text style={{ color: colores.primary, fontWeight: 'bold', fontSize: 18 }}>✓</Text>}
+                </TouchableOpacity>
+              )}
+              ItemSeparatorComponent={() => <View style={[styles.modalSeparator, { backgroundColor: colores.outlineVariant }]} />}
+            />
+            <TouchableOpacity
+              style={[styles.modalCloseButton, { backgroundColor: colores.surfaceContainer }]}
+              onPress={() => setVariedadModalVisible(false)}
+            >
+              <Text style={{ color: colores.secondary, fontWeight: '700', fontSize: 16 * escalaTexto }}>Cerrar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal Crear Finca */}
+      <Modal visible={showCrearFincaModal} transparent animationType="slide">
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <View style={[styles.modalContent, { backgroundColor: colores.surfaceContainerLowest }]}>
+            <Text style={[styles.modalTitle, { color: colores.onSurface, fontSize: 20 * escalaTexto }]}>
+              🏡 Registrar Finca
+            </Text>
+            <Text style={[styles.modalSubtitle, { color: colores.onSurfaceVariant, fontSize: 13 * escalaTexto }]}>
+              Ingresa los datos de tu finca para poder asociarle lotes.
+            </Text>
+
+            <TextInput
+              style={[
+                styles.input,
+                {
+                  borderColor: colores.outlineVariant,
+                  color: colores.onSurface,
+                  fontSize: 15 * escalaTexto,
+                },
+              ]}
+              placeholder="Nombre de la finca (ej: La Esmeralda)"
+              placeholderTextColor={colores.outline}
+              value={nuevaFincaNombre}
+              onChangeText={setNuevaFincaNombre}
+            />
+
+            <TextInput
+              style={[
+                styles.input,
+                {
+                  borderColor: colores.outlineVariant,
+                  color: colores.onSurface,
+                  fontSize: 15 * escalaTexto,
+                },
+              ]}
+              placeholder="Departamento (ej: Santander)"
+              placeholderTextColor={colores.outline}
+              value={nuevaFincaDepto}
+              onChangeText={setNuevaFincaDepto}
+            />
+
+            <TextInput
+              style={[
+                styles.input,
+                {
+                  borderColor: colores.outlineVariant,
+                  color: colores.onSurface,
+                  fontSize: 15 * escalaTexto,
+                },
+              ]}
+              placeholder="Municipio (ej: San Vicente de Chucurí)"
+              placeholderTextColor={colores.outline}
+              value={nuevaFincaMuni}
+              onChangeText={setNuevaFincaMuni}
+            />
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, { borderColor: colores.outline }]}
+                onPress={() => setShowCrearFincaModal(false)}
+                disabled={creandoFinca}
+              >
+                <Text style={[styles.modalButtonText, { color: colores.onSurfaceVariant, fontSize: 14 * escalaTexto }]}>
+                  Cancelar
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: colores.primary }]}
+                onPress={handleCrearFinca}
+                disabled={creandoFinca}
+              >
+                {creandoFinca ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={[styles.modalButtonText, { color: '#fff', fontSize: 14 * escalaTexto }]}>
+                    💾 Guardar Finca
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 };
@@ -382,7 +587,7 @@ const styles = StyleSheet.create({
   },
   backButton: {
     position: 'absolute',
-    left: 16,
+    left: 24,
     width: 44,
     height: 44,
     borderRadius: 22,
@@ -397,7 +602,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   controlPanel: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
     paddingTop: 20,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
@@ -485,5 +690,56 @@ const styles = StyleSheet.create({
   },
   modalButtonText: {
     fontWeight: '700',
+  },
+  selectWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1.5,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    height: 56,
+  },
+  selectText: {
+    fontWeight: '500',
+  },
+  modalItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
+  modalItemText: {
+    fontWeight: '500',
+  },
+  modalSeparator: {
+    height: 1,
+  },
+  modalCloseButton: {
+    borderRadius: 14,
+    height: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 16,
+  },
+  fincaBadge: {
+    position: 'absolute',
+    left: 70,
+    right: 24,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    justifyContent: 'center',
+    zIndex: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  fincaBadgeText: {
+    fontWeight: '600',
   },
 });

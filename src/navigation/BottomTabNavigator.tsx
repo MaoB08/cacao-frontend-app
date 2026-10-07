@@ -4,12 +4,12 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useAuthStore } from '../store/useAuthStore';
 import { Theme } from '../constants/theme';
 import {
-  HomeIcon, CameraIcon, MapIcon, BookIcon, ProfileIcon,
+  HomeIcon, CameraIcon, MapIcon, ProfileIcon, DollarIcon,
 } from '../components/Icons';
 
 import { DashboardAgricultorScreen } from '../screens/DashboardAgricultorScreen';
 import { DashboardExpertoScreen } from '../screens/DashboardExpertoScreen';
-import { PlaceholderScreen } from '../screens/PlaceholderScreen';
+import { PagosVentasScreen } from '../screens/PagosVentasScreen';
 import { PerfilStackNavigator } from './PerfilStackNavigator';
 import { CamaraStackNavigator } from './CamaraStackNavigator';
 import { MapaStackNavigator } from './MapaStackNavigator';
@@ -19,9 +19,6 @@ import { useAccesibilidad } from '../contexts/AccesibilidadContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const Tab = createBottomTabNavigator();
-
-// Wrapper component for placeholder tab
-const CatalogoTab = () => <PlaceholderScreen title="Catálogo" icon="📖" />;
 
 export const BottomTabNavigator = () => {
   const { user } = useAuthStore(
@@ -108,8 +105,8 @@ export const BottomTabNavigator = () => {
         }}
       />
       <Tab.Screen
-        name="Catálogo"
-        component={CatalogoTab}
+        name="Ventas"
+        component={PagosVentasScreen}
         options={{
           tabBarIcon: ({ color, focused }) => (
             <View 
@@ -118,7 +115,7 @@ export const BottomTabNavigator = () => {
                 focused && [styles.activeIconWrapper, { backgroundColor: colores.primary, shadowColor: colores.primary }]
               ]}
             >
-              <BookIcon color={focused ? '#ffffff' : color} size={20} />
+              <DollarIcon color={focused ? '#ffffff' : color} size={20} />
             </View>
           ),
         }}

@@ -24,6 +24,7 @@ import {
   CloseIcon,
   ChevronRightIcon,
 } from './Icons';
+import { CultivIALogo } from './CultivIALogo';
 
 interface DrawerMenuModalProps {
   visible: boolean;
@@ -155,7 +156,7 @@ export const DrawerMenuModal: React.FC<DrawerMenuModalProps> = ({
                     ]}
                     numberOfLines={1}
                   >
-                    {perfil?.finca?.nombre || 'CacaoCare App'}
+                    {perfil?.finca?.nombre || 'CultivIA App'}
                   </Text>
                 </View>
               </View>
@@ -230,14 +231,15 @@ export const DrawerMenuModal: React.FC<DrawerMenuModalProps> = ({
               })}
             </ScrollView>
 
-            <View style={[styles.footer, { borderTopColor: colores.outlineVariant }]}>
+            <View style={[styles.footer, { borderTopColor: colores.outlineVariant, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }]}>
+              <CultivIALogo size={28} />
               <Text
                 style={[
                   styles.versionText,
                   { fontSize: getScaledFont(11), color: colores.onSurfaceVariant },
                 ]}
               >
-                CacaoCare v1.0.0 • Asistencia en Cultivo
+                CultivIA v1.0.0 • Asistencia en Cultivo
               </Text>
             </View>
           </SafeAreaView>

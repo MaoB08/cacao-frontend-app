@@ -210,7 +210,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
+    paddingHorizontal: 24,
     paddingVertical: 14,
   },
   backButton: {
@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   list: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 24,
     paddingBottom: 40,
   },
   card: {

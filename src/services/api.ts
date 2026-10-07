@@ -1,26 +1,29 @@
 import axios from 'axios';
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 import { useAuthStore } from '../store/useAuthStore';
 
 // URL del backend configurada dinámicamente (Soporta Dispositivos Físicos en Wi-Fi, Web, Android e iOS)
 const getApiUrl = () => {
-  if (process.env.EXPO_PUBLIC_API_URL) {
-    return process.env.EXPO_PUBLIC_API_URL;
-  }
-
+  // 1. En desarrollo con Expo Go o Dev Client, detectar automáticamente la IP del host Metro
   try {
-    const Constants = require('expo-constants').default;
     const hostUri = Constants?.expoConfig?.hostUri || Constants?.manifest2?.extra?.expoGo?.developer?.tool;
     if (hostUri) {
       const hostIp = hostUri.split(':')[0];
-      if (hostIp && hostIp !== 'localhost' && hostIp !== '127.0.0.1') {
+      if (hostIp && hostIp !== 'localhost' && hostIp !== '127.0.0.1' && !hostIp.includes('exp.direct')) {
         return `http://${hostIp}:8080/api/v1`;
       }
     }
   } catch (e) {
-    // Ignorar si no se puede cargar expo-constants
+    // Continuar si falla la lectura de expo-constants
   }
 
+  // 2. Variable de entorno explícita (definida en .env)
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    return process.env.EXPO_PUBLIC_API_URL;
+  }
+
+  // 3. Fallback por plataforma
   if (Platform.OS === 'web' || Platform.OS === 'ios') {
     return 'http://localhost:8080/api/v1';
   }
@@ -28,7 +31,7 @@ const getApiUrl = () => {
 };
 
 const API_URL = getApiUrl();
-console.log('🔗 Conectando al Backend CacaoCare en:', API_URL);
+console.log('🔗 Conectando al Backend CultivIA en:', API_URL);
 
 export const api = axios.create({
   baseURL: API_URL,
@@ -84,6 +87,7 @@ api.interceptors.response.use(
 
     // Manejar caso de caída del servidor (Timeout o Red)
     if (!error.response) {
+      console.warn('⚠️ [API Error] Servidor inaccesible:', error.message, error.code, 'intentando conectar a:', (originalRequest?.baseURL || API_URL) + (originalRequest?.url || ''));
       return Promise.reject({ error: 'sin_servidor', mensaje: 'Servidor inaccesible. Por favor intenta más tarde.' });
     }
 

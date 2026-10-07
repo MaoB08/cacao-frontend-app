@@ -292,7 +292,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
+    paddingHorizontal: 24,
     paddingVertical: 12,
   },
   headerBtn: {
@@ -306,7 +306,7 @@ const styles = StyleSheet.create({
   headerAvatar: { width: 36, height: 36, borderRadius: 18 },
   headerAvatarPlaceholder: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   avatarLetter: { fontWeight: '700' },
-  scroll: { paddingHorizontal: 20, paddingBottom: 40 },
+  scroll: { paddingHorizontal: 24, paddingBottom: 40 },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',

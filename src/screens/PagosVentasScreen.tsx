@@ -34,7 +34,7 @@ interface VentaRegistrada {
   totalEstimado: number;
 }
 
-const STORAGE_KEY_VENTAS = '@cacaocare_ventas_registradas';
+const STORAGE_KEY_VENTAS = '@cultivia_ventas_registradas';
 
 export const PagosVentasScreen = ({ navigation }: any) => {
   const { escalaTexto, colores, botonesGrandes } = useAccesibilidad();
@@ -88,7 +88,10 @@ export const PagosVentasScreen = ({ navigation }: any) => {
     }
 
     try {
-      const saved = await safeStorage.getItem(STORAGE_KEY_VENTAS);
+      let saved = await safeStorage.getItem(STORAGE_KEY_VENTAS);
+      if (!saved) {
+        saved = await safeStorage.getItem('@cacaocare_ventas_registradas');
+      }
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
@@ -208,7 +211,7 @@ export const PagosVentasScreen = ({ navigation }: any) => {
       if (savedOnBackend) {
         Alert.alert(
           '¡Venta Registrada en Base de Datos! ☁️',
-          'El registro de la venta se ha guardado correctamente en la base de datos de CacaoCare.'
+          'El registro de la venta se ha guardado correctamente en la base de datos de CultivIA.'
         );
       } else {
         const motivo = backendErrDetails ? ` (${backendErrDetails})` : '';
@@ -658,7 +661,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
+    paddingHorizontal: 24,
     paddingVertical: 12,
   },
   backBtn: {
@@ -669,7 +672,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   scroll: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 24,
     paddingBottom: 40,
   },
   sectionHeader: {

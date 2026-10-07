@@ -41,11 +41,39 @@ export function useGpsTracker(options: UseGpsTrackerOptions = {}) {
   const subscriptionRef = useRef<Location.LocationSubscription | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const coordenadasRef = useRef<CoordenadaGPS[]>([]);
+  const duracionSegundosRef = useRef<number>(0);
+
+  const iniciarTimer = useCallback(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
+    timerRef.current = setInterval(() => {
+      duracionSegundosRef.current += 1;
+      setState((prev) => ({
+        ...prev,
+        duracionSegundos: duracionSegundosRef.current,
+      }));
+    }, 1000);
+  }, []);
+
+  const detenerTimer = useCallback(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  }, []);
 
   /**
    * Solicita permisos de ubicación y comienza el rastreo GPS.
    */
   const iniciarRecorrido = useCallback(async () => {
+    // Limpiar cualquier sesión anterior activa
+    if (subscriptionRef.current) {
+      subscriptionRef.current.remove();
+      subscriptionRef.current = null;
+    }
+    detenerTimer();
+
     // Solicitar permisos de ubicación en primer plano
     const { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== 'granted') {
@@ -60,6 +88,7 @@ export function useGpsTracker(options: UseGpsTrackerOptions = {}) {
 
     // Resetear estado
     coordenadasRef.current = [];
+    duracionSegundosRef.current = 0;
     const tiempoInicio = Date.now();
 
     setState({
@@ -72,13 +101,7 @@ export function useGpsTracker(options: UseGpsTrackerOptions = {}) {
       duracionSegundos: 0,
     });
 
-    // Timer para actualizar la duración en tiempo real
-    timerRef.current = setInterval(() => {
-      setState((prev) => ({
-        ...prev,
-        duracionSegundos: Math.floor((Date.now() - tiempoInicio) / 1000),
-      }));
-    }, 1000);
+    iniciarTimer();
 
     // Iniciar suscripción GPS de alta precisión
     const subscription = await Location.watchPositionAsync(
@@ -132,7 +155,7 @@ export function useGpsTracker(options: UseGpsTrackerOptions = {}) {
     );
 
     subscriptionRef.current = subscription;
-  }, [intervaloMs, distanciaMinima]);
+  }, [intervaloMs, distanciaMinima, iniciarTimer, detenerTimer]);
 
   /**
    * Pausa el rastreo GPS (mantiene las coordenadas recolectadas).
@@ -142,14 +165,21 @@ export function useGpsTracker(options: UseGpsTrackerOptions = {}) {
       subscriptionRef.current.remove();
       subscriptionRef.current = null;
     }
+    detenerTimer();
     setState((prev) => ({ ...prev, estado: 'paused' }));
-  }, []);
+  }, [detenerTimer]);
 
   /**
    * Reanuda el rastreo GPS después de una pausa.
    */
   const reanudarRecorrido = useCallback(async () => {
+    if (subscriptionRef.current) {
+      subscriptionRef.current.remove();
+      subscriptionRef.current = null;
+    }
+
     setState((prev) => ({ ...prev, estado: 'tracking' }));
+    iniciarTimer();
 
     const subscription = await Location.watchPositionAsync(
       {
@@ -195,7 +225,7 @@ export function useGpsTracker(options: UseGpsTrackerOptions = {}) {
     );
 
     subscriptionRef.current = subscription;
-  }, [intervaloMs, distanciaMinima]);
+  }, [intervaloMs, distanciaMinima, iniciarTimer]);
 
   /**
    * Finaliza el recorrido y devuelve las coordenadas simplificadas.
@@ -209,10 +239,7 @@ export function useGpsTracker(options: UseGpsTrackerOptions = {}) {
     }
 
     // Detener timer de duración
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
+    detenerTimer();
 
     // Simplificar coordenadas con Douglas-Peucker
     const coordsSimples = coordenadasRef.current.map((c) => ({
@@ -225,7 +252,7 @@ export function useGpsTracker(options: UseGpsTrackerOptions = {}) {
     setState((prev) => ({ ...prev, estado: 'finished' }));
 
     return simplificadas;
-  }, []);
+  }, [detenerTimer]);
 
   /**
    * Cancela completamente el recorrido y limpia el estado.
@@ -235,11 +262,9 @@ export function useGpsTracker(options: UseGpsTrackerOptions = {}) {
       subscriptionRef.current.remove();
       subscriptionRef.current = null;
     }
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
+    detenerTimer();
     coordenadasRef.current = [];
+    duracionSegundosRef.current = 0;
     setState({
       estado: 'idle',
       coordenadas: [],
@@ -248,7 +273,7 @@ export function useGpsTracker(options: UseGpsTrackerOptions = {}) {
       precisionActual: 0,
       duracionSegundos: 0,
     });
-  }, []);
+  }, [detenerTimer]);
 
   // Limpiar suscripciones al desmontar
   useEffect(() => {

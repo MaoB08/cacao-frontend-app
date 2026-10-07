@@ -187,8 +187,21 @@ export const COLORES_ENFERMEDAD: Record<string, string> = {
 };
 
 export const getColorEnfermedad = (enfermedad: string): string => {
-  const normalizada = enfermedad.trim();
-  return COLORES_ENFERMEDAD[normalizada] || '#9E9E9E';
+  if (!enfermedad) return '#9E9E9E';
+  const normalizada = enfermedad.toLowerCase().trim();
+  if (normalizada.includes('monilia') || normalizada.includes('moniliasis')) {
+    return COLORES_ENFERMEDAD['Monilia'];
+  }
+  if (normalizada.includes('escoba')) {
+    return COLORES_ENFERMEDAD['Escoba de Bruja'];
+  }
+  if (normalizada.includes('negra') || normalizada.includes('phytophthora') || normalizada.includes('fitóftora') || normalizada.includes('fitoftora')) {
+    return COLORES_ENFERMEDAD['Mazorca Negra'];
+  }
+  if (normalizada.includes('sana') || normalizada.includes('saludable')) {
+    return COLORES_ENFERMEDAD['Sana'];
+  }
+  return '#9E9E9E';
 };
 
 // ======================== Estado del GPS Tracker ========================

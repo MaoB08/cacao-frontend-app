@@ -11,6 +11,7 @@ import { useAccesibilidad } from '../contexts/AccesibilidadContext';
 import { useDiagnosticoStore } from '../store/useDiagnosticoStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { EcoIcon } from '../components/Icons';
+import { CultivIALogo } from '../components/CultivIALogo';
 
 export const PantallaCargaScreen = ({ route, navigation }: any) => {
   const { imageUri } = route.params || {};
@@ -127,14 +128,14 @@ export const PantallaCargaScreen = ({ route, navigation }: any) => {
           />
 
           {/* Contenedor de Logo */}
-          <View style={[styles.logoCard, { backgroundColor: colores.surfaceContainer }]}>
-            <EcoIcon color={colores.primary} size={64} />
+          <View style={[styles.logoCard, { backgroundColor: '#ffffff', overflow: 'hidden' }]}>
+            <CultivIALogo size={96} />
           </View>
         </View>
 
-        {/* Tipografía CacaoCare */}
+        {/* Tipografía CultivIA */}
         <Text style={[styles.brandTitle, { fontSize: getScaledFont(32), color: colores.primary }]}>
-          CacaoCare
+          CultivIA
         </Text>
         <Text style={[styles.brandSubtitle, { fontSize: getScaledFont(13), color: colores.onSurfaceVariant }]}>
           INTELIGENCIA AGRÍCOLA

@@ -209,7 +209,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
+    paddingHorizontal: 24,
     paddingVertical: 12,
   },
   backBtn: {
@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   title: { fontWeight: '700' },
-  scroll: { paddingHorizontal: 20, paddingBottom: 40 },
+  scroll: { paddingHorizontal: 24, paddingBottom: 40 },
   sectionTitle: { fontWeight: '700', marginBottom: 4 },
   sectionDesc: { marginBottom: 16, lineHeight: 18 },
   card: {

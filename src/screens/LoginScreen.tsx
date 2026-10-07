@@ -29,6 +29,7 @@ import {
   CameraIcon, 
   ArrowRightIcon 
 } from '../components/Icons';
+import { CultivIALogo } from '../components/CultivIALogo';
 
 // Validación con Zod para soportar tanto Email como Teléfono colombiano
 const loginSchema = z.object({
@@ -216,9 +217,9 @@ export const LoginScreen = ({ navigation }: any) => {
         {/* Brand Header */}
         <View style={styles.header}>
           <View style={styles.logoContainer}>
-            <CacaoIcon color={Theme.colors.primary} size={46} />
+            <CultivIALogo size={92} />
           </View>
-          <Text style={styles.title}>CacaoCare</Text>
+          <Text style={styles.title}>CultivIA</Text>
           <Text style={styles.subtitle}>Tecnología inteligente para su cultivo de cacao</Text>
         </View>
 

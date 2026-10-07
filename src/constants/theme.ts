@@ -32,7 +32,7 @@ export const Theme = {
     stackSm: 8,
     stackMd: 16,
     stackLg: 32,
-    marginMobile: 20,
+    marginMobile: 24,
     gutterMobile: 16,
     touchTargetMin: 48,
   },

@@ -13,6 +13,7 @@ import {
   DollarIcon, CameraIcon
 } from '../components/Icons';
 import { ProfileSkeleton } from '../components/SkeletonLoader';
+import { CultivIALogo } from '../components/CultivIALogo';
 
 export const PerfilScreen = ({ navigation }: any) => {
   const { perfil, loading, fetchPerfil, updateFoto, updatePerfil, logout } = usePerfilStore();
@@ -160,7 +161,7 @@ export const PerfilScreen = ({ navigation }: any) => {
   const handleLogout = () => {
     Alert.alert(
       'Cerrar Sesión',
-      '¿Estás seguro de que deseas salir de CacaoCare?',
+      '¿Estás seguro de que deseas salir de CultivIA?',
       [
         { text: 'Cancelar', style: 'cancel' },
         { 
@@ -385,9 +386,12 @@ export const PerfilScreen = ({ navigation }: any) => {
         </TouchableOpacity>
 
         {/* Version label */}
-        <Text style={[styles.versionLabel, { fontSize: getScaledFont(12), color: colores.onSurfaceVariant }]}>
-          Versión {p.versionApp}
-        </Text>
+        <View style={{ alignItems: 'center', marginTop: 12 }}>
+          <CultivIALogo size={52} />
+          <Text style={[styles.versionLabel, { fontSize: getScaledFont(12), color: colores.onSurfaceVariant, marginTop: 4 }]}>
+            CultivIA • Versión {p.versionApp}
+          </Text>
+        </View>
       </ScrollView>
 
       {/* Modal de Edición de Perfil */}
@@ -520,7 +524,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
+    paddingHorizontal: 24,
     paddingVertical: 12,
   },
   headerBtn: {
@@ -531,7 +535,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: { fontWeight: '700' },
-  scroll: { paddingHorizontal: 20, paddingBottom: 40 },
+  scroll: { paddingHorizontal: 24, paddingBottom: 40 },
   identityCard: {
     alignItems: 'center',
     marginTop: 16,

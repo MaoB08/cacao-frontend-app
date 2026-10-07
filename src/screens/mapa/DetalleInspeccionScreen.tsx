@@ -133,7 +133,7 @@ export const DetalleInspeccionScreen = () => {
         )}
 
         {/* Detecciones */}
-        <Text style={[styles.sectionTitle, { color: colores.onSurface, fontSize: 15 * escalaTexto, marginLeft: 16, marginTop: 20 }]}>
+        <Text style={[styles.sectionTitle, { color: colores.onSurface, fontSize: 15 * escalaTexto, marginLeft: 24, marginTop: 20 }]}>
           🦠 Enfermedades detectadas ({inspeccion.detecciones.length})
         </Text>
 
@@ -200,7 +200,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
+    paddingHorizontal: 24,
     paddingVertical: 14,
   },
   backButton: {
@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   infoCard: {
-    marginHorizontal: 16,
+    marginHorizontal: 24,
     borderRadius: 16,
     padding: 18,
     marginBottom: 12,
@@ -246,7 +246,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   observacionesCard: {
-    marginHorizontal: 16,
+    marginHorizontal: 24,
     borderRadius: 16,
     padding: 16,
     shadowColor: '#000',
@@ -263,7 +263,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   emptyDetecciones: {
-    marginHorizontal: 16,
+    marginHorizontal: 24,
     marginTop: 10,
     borderRadius: 16,
     padding: 24,
@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   deteccionCard: {
-    marginHorizontal: 16,
+    marginHorizontal: 24,
     marginTop: 10,
     borderRadius: 16,
     padding: 14,
