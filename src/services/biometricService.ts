@@ -1,121 +1,158 @@
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as SecureStore from 'expo-secure-store';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
+import { Platform } from 'react-native';
+import type { User } from '../store/useAuthStore';
 
+const BIOMETRIC_SESSION_KEY = 'biometric_refresh_session';
 const BIOMETRIC_EMAIL_KEY = 'biometric_email';
-const BIOMETRIC_PASSWORD_KEY = 'biometric_password';
 const BIOMETRICS_ENABLED_KEY = 'biometrics_enabled';
+const LEGACY_PASSWORD_KEY = 'biometric_password';
+const BIOMETRIC_OPTIONS: SecureStore.SecureStoreOptions = {
+  requireAuthentication: true,
+  authenticationPrompt: 'Confirma tu identidad para acceder a CultivIA',
+};
+
+export interface BiometricSession {
+  identifier: string;
+  refreshToken: string;
+  user: User;
+}
+
+async function clearLegacyPassword(): Promise<boolean> {
+  try {
+    const legacyPassword = await SecureStore.getItemAsync(LEGACY_PASSWORD_KEY);
+    if (legacyPassword !== null) {
+      await SecureStore.deleteItemAsync(LEGACY_PASSWORD_KEY);
+      await SecureStore.deleteItemAsync(BIOMETRICS_ENABLED_KEY);
+      return true;
+    }
+  } catch (error) {
+    console.warn('No se pudo retirar la credencial biométrica anterior.', error);
+  }
+  return false;
+}
 
 export const biometricService = {
-  /**
-   * Verifica si el hardware soporta biometría y si el usuario tiene huellas/rostros registrados.
-   */
+  isRunningInExpoGo: (): boolean => Constants.executionEnvironment === ExecutionEnvironment.StoreClient,
+
   isBiometricsAvailable: async (): Promise<boolean> => {
     try {
-      const hasHardware = await LocalAuthentication.hasHardwareAsync();
-      const isEnrolled = await LocalAuthentication.isEnrolledAsync();
-      return hasHardware && isEnrolled;
+      if (biometricService.isRunningInExpoGo()) return false;
+
+      const supported = await LocalAuthentication.hasHardwareAsync();
+      const enrolled = await LocalAuthentication.isEnrolledAsync();
+      return supported && enrolled && SecureStore.canUseBiometricAuthentication();
     } catch (error) {
       console.error('Error al verificar disponibilidad de biometría:', error);
       return false;
     }
   },
 
-  /**
-   * Verifica si la huella dactilar ha sido activada en la app y si existen credenciales guardadas.
-   */
   isBiometricsEnabled: async (): Promise<boolean> => {
+    await clearLegacyPassword();
     try {
-      const enabled = await SecureStore.getItemAsync(BIOMETRICS_ENABLED_KEY);
-      const email = await SecureStore.getItemAsync(BIOMETRIC_EMAIL_KEY);
-      const password = await SecureStore.getItemAsync(BIOMETRIC_PASSWORD_KEY);
-      return enabled === 'true' && !!email && !!password;
+      const [enabled, identifier] = await Promise.all([
+        SecureStore.getItemAsync(BIOMETRICS_ENABLED_KEY),
+        SecureStore.getItemAsync(BIOMETRIC_EMAIL_KEY),
+      ]);
+      return enabled === 'true' && !!identifier;
     } catch (error) {
       console.error('Error al verificar si la biometría está habilitada:', error);
       return false;
     }
   },
 
-  /**
-   * Obtiene el correo guardado para biometría para poder pre-visualizarlo o usarlo.
-   */
   getSavedEmail: async (): Promise<string | null> => {
     try {
       return await SecureStore.getItemAsync(BIOMETRIC_EMAIL_KEY);
     } catch (error) {
-      console.error('Error al obtener correo biométrico guardado:', error);
+      console.error('Error al obtener el identificador biométrico:', error);
       return null;
     }
   },
 
-  /**
-   * Activa el inicio biométrico guardando de forma segura las credenciales tras una autenticación exitosa.
-   */
-  enableBiometrics: async (email: string, password: string): Promise<boolean> => {
+  enableBiometrics: async (
+    identifier: string,
+    refreshToken: string,
+    user: User,
+  ): Promise<boolean> => {
+    if (!(await biometricService.isBiometricsAvailable())) return false;
+
+    const session: BiometricSession = { identifier, refreshToken, user };
     try {
-      const result = await LocalAuthentication.authenticateAsync({
-        promptMessage: 'Confirme su identidad para activar el acceso con huella',
-        fallbackLabel: 'Usar contraseña',
-        disableDeviceFallback: false,
-      });
+      await SecureStore.setItemAsync(BIOMETRIC_SESSION_KEY, JSON.stringify(session), BIOMETRIC_OPTIONS);
 
-      if (result.success) {
-        await SecureStore.setItemAsync(BIOMETRIC_EMAIL_KEY, email);
-        await SecureStore.setItemAsync(BIOMETRIC_PASSWORD_KEY, password);
-        await SecureStore.setItemAsync(BIOMETRICS_ENABLED_KEY, 'true');
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error('Error al activar biometría:', error);
-      return false;
-    }
-  },
-
-  /**
-   * Desactiva el inicio biométrico eliminando las credenciales guardadas de forma segura.
-   */
-  disableBiometrics: async (): Promise<void> => {
-    try {
-      await SecureStore.deleteItemAsync(BIOMETRIC_EMAIL_KEY);
-      await SecureStore.deleteItemAsync(BIOMETRIC_PASSWORD_KEY);
-      await SecureStore.setItemAsync(BIOMETRICS_ENABLED_KEY, 'false');
-    } catch (error) {
-      console.error('Error al desactivar biometría:', error);
-    }
-  },
-
-  /**
-   * Autentica al usuario usando biometría y retorna las credenciales guardadas.
-   */
-  authenticate: async (): Promise<{ email: string; password: string } | null> => {
-    try {
-      const isAvailable = await biometricService.isBiometricsAvailable();
-      if (!isAvailable) {
-        return null;
-      }
-
-      const isEnabled = await biometricService.isBiometricsEnabled();
-      if (!isEnabled) {
-        return null;
-      }
-
-      const result = await LocalAuthentication.authenticateAsync({
-        promptMessage: 'Inicie sesión con su huella dactilar',
-        fallbackLabel: 'Usar contraseña',
-        disableDeviceFallback: false,
-      });
-
-      if (result.success) {
-        const email = await SecureStore.getItemAsync(BIOMETRIC_EMAIL_KEY);
-        const password = await SecureStore.getItemAsync(BIOMETRIC_PASSWORD_KEY);
-        if (email && password) {
-          return { email, password };
+      // iOS no solicita biometría al crear una entrada protegida. Leerla aquí
+      // confirma que el usuario puede desbloquearla antes de activar la opción.
+      if (Platform.OS === 'ios') {
+        const stored = await SecureStore.getItemAsync(BIOMETRIC_SESSION_KEY, BIOMETRIC_OPTIONS);
+        if (stored !== JSON.stringify(session)) {
+          await biometricService.disableBiometrics();
+          return false;
         }
       }
-      return null;
+
+      await SecureStore.setItemAsync(BIOMETRIC_EMAIL_KEY, identifier);
+      await SecureStore.setItemAsync(BIOMETRICS_ENABLED_KEY, 'true');
+      await SecureStore.deleteItemAsync(LEGACY_PASSWORD_KEY);
+      return true;
     } catch (error) {
-      console.error('Error en autenticación biométrica:', error);
+      console.error('Error al proteger la sesión biométrica:', error);
+      await biometricService.disableBiometrics();
+      return false;
+    }
+  },
+
+  updateBiometricRefreshToken: async (
+    session: BiometricSession,
+    refreshToken: string,
+  ): Promise<boolean> => {
+    try {
+      const updated = { ...session, refreshToken };
+      await SecureStore.setItemAsync(BIOMETRIC_SESSION_KEY, JSON.stringify(updated), BIOMETRIC_OPTIONS);
+      return true;
+    } catch (error) {
+      console.error('No se pudo renovar la sesión biométrica protegida:', error);
+      await biometricService.disableBiometrics();
+      return false;
+    }
+  },
+
+  disableBiometrics: async (): Promise<void> => {
+    try {
+      await SecureStore.deleteItemAsync(BIOMETRIC_SESSION_KEY, BIOMETRIC_OPTIONS);
+    } catch {
+      // Si cambió la huella o el rostro del dispositivo, elimina la entrada
+      // inaccesible sin pedir de nuevo una autenticación que ya no es válida.
+      try {
+        await SecureStore.deleteItemAsync(BIOMETRIC_SESSION_KEY);
+      } catch (error) {
+        console.warn('No se pudo eliminar la sesión biométrica protegida.', error);
+      }
+    }
+
+    await Promise.all([
+      SecureStore.deleteItemAsync(BIOMETRIC_EMAIL_KEY).catch(() => undefined),
+      SecureStore.deleteItemAsync(LEGACY_PASSWORD_KEY).catch(() => undefined),
+      SecureStore.deleteItemAsync(BIOMETRICS_ENABLED_KEY).catch(() => undefined),
+    ]);
+  },
+
+  authenticate: async (): Promise<BiometricSession | null> => {
+    try {
+      if (!(await biometricService.isBiometricsAvailable())) return null;
+      if (!(await biometricService.isBiometricsEnabled())) return null;
+
+      const stored = await SecureStore.getItemAsync(BIOMETRIC_SESSION_KEY, BIOMETRIC_OPTIONS);
+      if (!stored) return null;
+
+      const session = JSON.parse(stored) as BiometricSession;
+      if (!session.identifier || !session.refreshToken || !session.user?.id) return null;
+      return session;
+    } catch (error) {
+      console.error('Error al recuperar la sesión biométrica:', error);
       return null;
     }
-  }
+  },
 };

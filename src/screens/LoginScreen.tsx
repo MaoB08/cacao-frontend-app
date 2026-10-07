@@ -25,8 +25,7 @@ import {
   LockIcon, 
   EyeIcon, 
   EyeOffIcon, 
-  FingerprintIcon, 
-  CameraIcon, 
+  ShieldIcon,
   ArrowRightIcon 
 } from '../components/Icons';
 import { CultivIALogo } from '../components/CultivIALogo';
@@ -91,17 +90,16 @@ export const LoginScreen = ({ navigation }: any) => {
     setLoading(true);
     setErrorMessage(null);
     try {
-      const credentials = await biometricService.authenticate();
-      if (credentials) {
-        const response = await api.post('/auth/login', {
-          email: credentials.email,
-          password: credentials.password,
-        });
+      const biometricSession = await biometricService.authenticate();
+      if (!biometricSession) return;
 
-        const { accessToken, refreshToken, user } = response.data;
-        await setSession(user, accessToken, refreshToken);
-        Alert.alert('¡Bienvenido!', `Hola, ${user.nombre}`);
-      }
+      const response = await api.post('/auth/refresh', {
+        refreshToken: biometricSession.refreshToken,
+      });
+      const { accessToken, refreshToken } = response.data;
+      await setSession(biometricSession.user, accessToken, refreshToken);
+      await biometricService.updateBiometricRefreshToken(biometricSession, refreshToken);
+      Alert.alert('¡Bienvenido!', `Hola, ${biometricSession.user.nombre}`);
     } catch (error: any) {
       if (error.error === 'cuenta_bloqueada') {
         const retryAfter = error.retryAfter || 900;
@@ -120,6 +118,14 @@ export const LoginScreen = ({ navigation }: any) => {
   };
 
   const handleBiometricPress = async () => {
+    if (biometricService.isRunningInExpoGo()) {
+      Alert.alert(
+        'Huella no disponible en Expo Go',
+        'Para probar el inicio con huella, instala una build de desarrollo de CultivIA. Expo Go no permite acceder a la sesión protegida por biometría.'
+      );
+      return;
+    }
+
     const available = await biometricService.isBiometricsAvailable();
     if (!available) {
       Alert.alert('Huella dactilar', 'La autenticación biométrica no está disponible o no hay huellas/rostros registrados en el dispositivo.');
@@ -153,6 +159,14 @@ export const LoginScreen = ({ navigation }: any) => {
       const canUseBiometrics = await biometricService.isBiometricsAvailable();
       const isAlreadyEnabled = await biometricService.isBiometricsEnabled();
       const savedEmail = await biometricService.getSavedEmail();
+      const hasDifferentBiometricAccount = isAlreadyEnabled && !!savedEmail && savedEmail !== data.identifier;
+
+      if (hasDifferentBiometricAccount) {
+        // El dispositivo no debe conservar una sesión biométrica de otra cuenta
+        // si el usuario elige no activar la biometría para esta nueva cuenta.
+        await biometricService.disableBiometrics();
+        setIsBiometricConfigured(false);
+      }
 
       if (canUseBiometrics && (!isAlreadyEnabled || savedEmail !== data.identifier)) {
         const title = savedEmail && savedEmail !== data.identifier
@@ -178,7 +192,7 @@ export const LoginScreen = ({ navigation }: any) => {
             {
               text: 'Activar',
               onPress: async () => {
-                const enabled = await biometricService.enableBiometrics(data.identifier, data.password);
+                const enabled = await biometricService.enableBiometrics(data.identifier, refreshToken, user);
                 await setSession(user, accessToken, refreshToken);
                 if (enabled) {
                   Alert.alert('¡Bienvenido!', `Hola, ${user.nombre}\n\nInicio de sesión con huella activado.`);
@@ -334,12 +348,8 @@ export const LoginScreen = ({ navigation }: any) => {
           {/* Alt Login Options */}
           <View style={styles.altButtonsRow}>
             <TouchableOpacity style={styles.altButton} onPress={handleBiometricPress}>
-              <FingerprintIcon color={Theme.colors.secondary} size={18} />
+              <ShieldIcon color={Theme.colors.secondary} size={20} />
               <Text style={styles.altText}>Huella</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.altButton} onPress={() => Alert.alert('Código QR', 'Escáner QR no disponible en este módulo.')}>
-              <CameraIcon color={Theme.colors.secondary} size={18} />
-              <Text style={styles.altText}>QR</Text>
             </TouchableOpacity>
           </View>
 

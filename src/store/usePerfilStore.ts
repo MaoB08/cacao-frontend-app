@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { api } from '../services/api';
 import { useAuthStore } from './useAuthStore';
+import { biometricService } from '../services/biometricService';
 
 export interface FincaInfo {
   nombre: string;
@@ -139,6 +140,7 @@ export const usePerfilStore = create<PerfilState>((set, get) => ({
       console.warn('Error llamando endpoint de logout', e);
     } finally {
       // Siempre limpiar la sesión localmente
+      await biometricService.disableBiometrics();
       await useAuthStore.getState().clearSession();
       set({ perfil: null });
     }

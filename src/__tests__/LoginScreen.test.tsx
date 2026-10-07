@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { act, render, fireEvent, waitFor } from '@testing-library/react-native';
 import { LoginScreen } from '../screens/LoginScreen';
 
 // Mock de react-navigation
@@ -26,6 +26,7 @@ jest.mock('../services/biometricService', () => ({
   biometricService: {
     isBiometricsAvailable: jest.fn().mockResolvedValue(false),
     isBiometricsEnabled: jest.fn().mockResolvedValue(false),
+    isRunningInExpoGo: jest.fn().mockReturnValue(false),
     getSavedEmail: jest.fn().mockResolvedValue(null),
     enableBiometrics: jest.fn().mockResolvedValue(true),
     disableBiometrics: jest.fn().mockResolvedValue(undefined),
@@ -38,8 +39,8 @@ describe('Pruebas de Validación del Formulario de Login', () => {
     jest.clearAllMocks();
   });
 
-  it('debe renderizar correctamente los campos del formulario', () => {
-    const { getByPlaceholderText, getByText } = render(
+  it('debe renderizar correctamente los campos del formulario', async () => {
+    const { getByPlaceholderText, getByText } = await render(
       <LoginScreen navigation={mockNavigation} />
     );
 
@@ -49,11 +50,13 @@ describe('Pruebas de Validación del Formulario de Login', () => {
   });
 
   it('debe mostrar errores de validación si el formulario se envía vacío', async () => {
-    const { getByText } = render(
+    const { getByText } = await render(
       <LoginScreen navigation={mockNavigation} />
     );
 
-    fireEvent.press(getByText('Iniciar Sesión'));
+    await act(async () => {
+      fireEvent.press(getByText('Iniciar Sesión'));
+    });
 
     await waitFor(() => {
       expect(getByText('Ingrese su correo o teléfono')).toBeTruthy();
@@ -63,13 +66,13 @@ describe('Pruebas de Validación del Formulario de Login', () => {
 
   it('debe alertar al usuario si intenta usar la huella sin tenerla configurada', async () => {
     const { biometricService } = require('../services/biometricService');
-    biometricService.isBiometricsAvailable.mockResolvedValueOnce(true);
-    biometricService.isBiometricsEnabled.mockResolvedValueOnce(false);
+    biometricService.isBiometricsAvailable.mockResolvedValue(true);
+    biometricService.isBiometricsEnabled.mockResolvedValue(false);
     
     const { Alert } = require('react-native');
     const spyAlert = jest.spyOn(Alert, 'alert');
 
-    const { getByText } = render(
+    const { getByText } = await render(
       <LoginScreen navigation={mockNavigation} />
     );
 
@@ -80,6 +83,23 @@ describe('Pruebas de Validación del Formulario de Login', () => {
       expect(spyAlert).toHaveBeenCalledWith(
         'Huella no configurada',
         'Por favor, inicie sesión con su correo y contraseña primero para activar el inicio con huella.'
+      );
+    });
+    spyAlert.mockRestore();
+  });
+
+  it('debe explicar que Expo Go requiere una build nativa para usar la huella', async () => {
+    const { biometricService } = require('../services/biometricService');
+    biometricService.isRunningInExpoGo.mockReturnValue(true);
+    const spyAlert = jest.spyOn(require('react-native').Alert, 'alert');
+
+    const { getByText } = await render(<LoginScreen navigation={mockNavigation} />);
+    fireEvent.press(getByText('Huella'));
+
+    await waitFor(() => {
+      expect(spyAlert).toHaveBeenCalledWith(
+        'Huella no disponible en Expo Go',
+        expect.stringContaining('build de desarrollo')
       );
     });
     spyAlert.mockRestore();
