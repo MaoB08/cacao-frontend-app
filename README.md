@@ -53,8 +53,14 @@ Inicia el empaquetador Metro:
 
 ```bash
 npm run start
-# O
-npx expo start
+```
+
+`npm run start` fuerza el modo **Expo Go**. Este proyecto también incluye `expo-dev-client`; si se ejecuta `npx expo start` sin opción, Expo puede seleccionar el cliente de desarrollo y generar un QR que Expo Go no abre.
+
+Para usar una build de desarrollo instalada en el dispositivo, ejecuta:
+
+```bash
+npm run start:dev-client
 ```
 
 ### 4. Abrir la Aplicación

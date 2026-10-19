@@ -9,11 +9,16 @@ import { api } from '../services/api';
 import { Theme } from '../constants/theme';
 import {
   CacaoIcon, CameraIcon, AlertTriangleIcon, ActivityIcon,
-  ThermometerIcon, LeafIcon,
+  ThermometerIcon, LeafIcon, CalendarIcon, ChevronRightIcon,
+  UserIcon, MapPinIcon, ClockIcon,
 } from '../components/Icons';
 import { CultivIALogo } from '../components/CultivIALogo';
 import { useShallow } from 'zustand/react/shallow';
 import { useAccesibilidad } from '../contexts/AccesibilidadContext';
+import { agricultorVisitaService } from '../services/agricultorVisitaService';
+import { VisitasAgricultorDashboard, ProximaVisitaAgricultor } from '../types/visita';
+import { HistorialVisitasAgricultorModal } from '../components/HistorialVisitasAgricultorModal';
+import { resolveMediaUrl } from '../utils/mediaUtils';
 
 interface DiagnosticoInfo {
   id: string;
@@ -41,6 +46,8 @@ export const DashboardAgricultorScreen = ({ navigation }: any) => {
   const { user } = useAuthStore(useShallow((s) => ({ user: s.user })));
   const { escalaTexto, colores, botonesGrandes } = useAccesibilidad();
   const [data, setData] = useState<DashboardData | null>(null);
+  const [visitasDashboard, setVisitasDashboard] = useState<VisitasAgricultorDashboard | null>(null);
+  const [modalVisitasVisible, setModalVisitasVisible] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -48,8 +55,20 @@ export const DashboardAgricultorScreen = ({ navigation }: any) => {
   const fetchDashboard = useCallback(async () => {
     try {
       setError(null);
-      const res = await api.get('/agricultores/dashboard');
-      setData(res.data);
+      const [dashRes, visitasRes] = await Promise.allSettled([
+        api.get('/agricultores/dashboard'),
+        agricultorVisitaService.getResumenVisitas(),
+      ]);
+
+      if (dashRes.status === 'fulfilled') {
+        setData(dashRes.value.data);
+      } else {
+        throw dashRes.reason;
+      }
+
+      if (visitasRes.status === 'fulfilled') {
+        setVisitasDashboard(visitasRes.value);
+      }
     } catch (e: any) {
       setError(e.mensaje || 'Error al cargar el dashboard');
     } finally {
@@ -94,7 +113,23 @@ export const DashboardAgricultorScreen = ({ navigation }: any) => {
     );
   }
 
-  const d = data!;
+  if (!data) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colores.background }]}>
+        <View style={styles.loadingContainer}>
+          <AlertTriangleIcon color={colores.error} size={48} />
+          <Text style={[styles.errorText, { fontSize: getScaledFont(16), color: colores.error }]}>
+            {error || 'No fue posible conectar con el servidor CultivIA'}
+          </Text>
+          <TouchableOpacity style={[styles.retryButton, { backgroundColor: colores.primary }]} onPress={fetchDashboard}>
+            <Text style={[styles.retryButtonText, { fontSize: getScaledFont(16) }]}>Reintentar</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const d = data;
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={[styles.container, { backgroundColor: colores.background }]}>
@@ -111,10 +146,10 @@ export const DashboardAgricultorScreen = ({ navigation }: any) => {
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <Text style={[styles.farmerName, { fontSize: getScaledFont(24), color: colores.primary }]}>
-              {d.agricultor.nombre}
+              {d.agricultor?.nombre || user?.nombre || 'Agricultor'}
             </Text>
             <Text style={[styles.fincaName, { fontSize: getScaledFont(14), color: colores.secondary }]}>
-              {d.agricultor.nombreFinca}
+              {d.agricultor?.nombreFinca || user?.nombreFinca || 'Mi Finca Cacaotera'}
             </Text>
           </View>
           <View style={[styles.headerIcon, { backgroundColor: colores.surfaceContainer }]}>
@@ -180,21 +215,184 @@ export const DashboardAgricultorScreen = ({ navigation }: any) => {
           <Text style={[styles.scanButtonText, { fontSize: getScaledFont(16) }]}>Escanear Mazorca</Text>
         </TouchableOpacity>
 
+        {/* Visitas Técnicas del Agrónomo (MA-20) */}
+        <View style={styles.visitasSectionHeader}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <CalendarIcon color={colores.primary} size={22} />
+            <Text style={[styles.sectionTitle, { fontSize: getScaledFont(20), color: colores.onSurface, marginBottom: 0 }]}>
+              Asistencia Técnica
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.verHistorialLink, { minHeight: botonesGrandes ? 48 : 36 }]}
+            onPress={() => setModalVisitasVisible(true)}
+            accessibilityLabel="Ver historial completo de visitas técnicas"
+          >
+            <Text style={[styles.verHistorialLinkText, { color: colores.primary, fontSize: getScaledFont(13) }]}>
+              Ver historial
+            </Text>
+            <ChevronRightIcon color={colores.primary} size={16} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Bento / KPIs de Visitas */}
+        <View style={styles.visitasKpiRow}>
+          <View style={[styles.visitaKpiCard, { backgroundColor: colores.surfaceContainerLowest, borderColor: colores.outlineVariant }]}>
+            <Text style={[styles.visitaKpiNumber, { color: colores.primary, fontSize: getScaledFont(22) }]}>
+              {visitasDashboard?.proximasVisitas ?? 0}
+            </Text>
+            <Text style={[styles.visitaKpiLabel, { color: colores.onSurfaceVariant, fontSize: getScaledFont(12) }]}>
+              Próximas visitas
+            </Text>
+          </View>
+          <View style={[styles.visitaKpiCard, { backgroundColor: colores.surfaceContainerLowest, borderColor: colores.outlineVariant }]}>
+            <Text style={[styles.visitaKpiNumber, { color: '#154212', fontSize: getScaledFont(22) }]}>
+              {visitasDashboard?.completadasTotal ?? 0}
+            </Text>
+            <Text style={[styles.visitaKpiLabel, { color: colores.onSurfaceVariant, fontSize: getScaledFont(12) }]}>
+              Completadas
+            </Text>
+          </View>
+        </View>
+
+        {/* Próximas Visitas Cards o Estado Vacío */}
+        {visitasDashboard?.proximas && visitasDashboard.proximas.length > 0 ? (
+          <View style={styles.proximasContainer}>
+            {visitasDashboard.proximas.map((prox) => {
+              const f = new Date(prox.fechaProgramada);
+              const fStr = f.toLocaleDateString('es-CO', {
+                weekday: 'short',
+                day: 'numeric',
+                month: 'short',
+              });
+              const hStr = f.toLocaleTimeString('es-CO', {
+                hour: '2-digit',
+                minute: '2-digit',
+              });
+              return (
+                <TouchableOpacity
+                  key={prox.id}
+                  style={[
+                    styles.proximaCard,
+                    {
+                      backgroundColor: colores.surfaceContainerLowest,
+                      borderColor: colores.outlineVariant,
+                    },
+                  ]}
+                  onPress={() => setModalVisitasVisible(true)}
+                  accessibilityLabel={`Visita técnica agendada para ${fStr}`}
+                >
+                  <View style={styles.proximaCardHeader}>
+                    <View style={[styles.estadoPill, { backgroundColor: prox.estado === 'EN_CURSO' ? '#fef3c7' : '#e0f2fe' }]}>
+                      <Text style={[styles.estadoPillText, { color: prox.estado === 'EN_CURSO' ? '#b45309' : '#0369a1', fontSize: getScaledFont(11) }]}>
+                        {prox.estado === 'EN_CURSO' ? 'En Curso' : 'Programada'}
+                      </Text>
+                    </View>
+                    <Text style={[styles.proximaFecha, { color: colores.primary, fontSize: getScaledFont(13) }]}>
+                      {fStr} • {hStr}
+                    </Text>
+                  </View>
+
+                  <Text style={[styles.proximaMotivo, { color: colores.onSurface, fontSize: getScaledFont(15) }]} numberOfLines={1}>
+                    {prox.motivo || 'Visita agronómica programada'}
+                  </Text>
+
+                  <View style={styles.proximaFooter}>
+                    <View style={styles.proximaMetaItem}>
+                      <UserIcon color={colores.secondary} size={14} />
+                      <Text style={[styles.proximaMetaText, { color: colores.onSurfaceVariant, fontSize: getScaledFont(12) }]} numberOfLines={1}>
+                        {prox.agronomoNombre}
+                      </Text>
+                    </View>
+                    <View style={styles.proximaMetaItem}>
+                      <MapPinIcon color={colores.secondary} size={14} />
+                      <Text style={[styles.proximaMetaText, { color: colores.onSurfaceVariant, fontSize: getScaledFont(12) }]} numberOfLines={1}>
+                        {prox.fincaNombre}{prox.loteNombre ? ` • ${prox.loteNombre}` : ''}
+                      </Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={[
+              styles.emptyVisitasCard,
+              {
+                backgroundColor: colores.surfaceContainerLowest,
+                borderColor: colores.outlineVariant,
+              },
+            ]}
+            onPress={() => setModalVisitasVisible(true)}
+            accessibilityLabel="Ver registro de asistencias técnicas"
+          >
+            <View style={[styles.emptyIconCircle, { backgroundColor: colores.surfaceContainer }]}>
+              <CalendarIcon color={colores.primary} size={20} />
+            </View>
+            <View style={{ flex: 1, marginLeft: 12 }}>
+              <Text style={[styles.emptyVisitaTitle, { color: colores.onSurface, fontSize: getScaledFont(14) }]}>
+                Sin visitas pendientes
+              </Text>
+              <Text style={[styles.emptyVisitaSub, { color: colores.onSurfaceVariant, fontSize: getScaledFont(12) }]}>
+                Consulta el historial y recomendaciones técnicas previas aquí.
+              </Text>
+            </View>
+            <ChevronRightIcon color={colores.outline} size={18} />
+          </TouchableOpacity>
+        )}
+
         {/* Recent Diagnoses */}
         <Text style={[styles.sectionTitle, { fontSize: getScaledFont(20), color: colores.onSurface }]}>
           Diagnósticos Recientes
         </Text>
         {d.diagnosticosRecientes.map((diag) => {
           const sev = severityColors[diag.severidad] || severityColors.BAJA;
+          const resolvedUri = resolveMediaUrl(diag.imagenUrl);
           return (
-            <View
+            <TouchableOpacity
               key={diag.id}
+              activeOpacity={0.8}
+              onPress={() => {
+                navigation.navigate('Cámara', {
+                  screen: 'ResultadoAnalisis',
+                  params: {
+                    diagnostico: {
+                      id: diag.id,
+                      imagenUrl: resolvedUri || diag.imagenUrl,
+                      tieneEnfermedad: diag.enfermedadDetectada.toLowerCase() !== 'mazorca sana',
+                      nombreEnfermedad: diag.enfermedadDetectada,
+                      nombreCientifico: diag.enfermedadDetectada.toLowerCase().includes('monilia')
+                        ? 'Moniliophthora roreri'
+                        : 'Theobroma cacao L.',
+                      codigoClase: '',
+                      probabilidad: diag.nivelConfianza,
+                      confianza: `${Math.round(diag.nivelConfianza * 100)}%`,
+                      severidad: diag.severidad,
+                      concluyente: true,
+                      recomendaciones: [],
+                      createdAt: diag.fecha,
+                    },
+                    imageUri: resolvedUri || diag.imagenUrl,
+                  },
+                });
+              }}
               style={[
                 styles.diagCard,
                 { backgroundColor: colores.surfaceContainerLowest, borderColor: colores.outlineVariant }
               ]}
             >
-              <Image source={{ uri: diag.imagenUrl }} style={styles.diagImage} />
+              {resolvedUri ? (
+                <Image
+                  source={{ uri: resolvedUri }}
+                  style={styles.diagImage}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View style={[styles.diagImage, styles.diagImagePlaceholder]}>
+                  <CameraIcon color={colores.outline} size={26} />
+                </View>
+              )}
               <View style={styles.diagInfo}>
                 <Text style={[styles.diagDisease, { fontSize: getScaledFont(15), color: colores.onSurface }]} numberOfLines={1}>
                   {diag.enfermedadDetectada}
@@ -211,10 +409,16 @@ export const DashboardAgricultorScreen = ({ navigation }: any) => {
                   </Text>
                 </View>
               </View>
-            </View>
+              <ChevronRightIcon color={colores.outline} size={18} />
+            </TouchableOpacity>
           );
         })}
       </ScrollView>
+
+      <HistorialVisitasAgricultorModal
+        visible={modalVisitasVisible}
+        onClose={() => setModalVisitasVisible(false)}
+      />
     </SafeAreaView>
   );
 };
@@ -291,10 +495,114 @@ const styles = StyleSheet.create({
     shadowRadius: 12, elevation: 3,
   },
   diagImage: { width: 68, height: 68, borderRadius: 12, backgroundColor: Theme.colors.surfaceContainer },
+  diagImagePlaceholder: { alignItems: 'center', justifyContent: 'center' },
   diagInfo: { flex: 1, marginLeft: 12, justifyContent: 'center' },
   diagDisease: { fontWeight: '700' },
   diagDate: { marginTop: 2 },
   severityBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
   severityText: { fontWeight: '700', letterSpacing: 0.5 },
   confidence: { fontWeight: '700' },
+  visitasSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+    marginTop: 4,
+  },
+  verHistorialLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  verHistorialLinkText: {
+    fontWeight: '700',
+  },
+  visitasKpiRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 14,
+  },
+  visitaKpiCard: {
+    flex: 1,
+    padding: 12,
+    borderRadius: Theme.roundness.md,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  visitaKpiNumber: {
+    fontWeight: '800',
+    marginBottom: 2,
+  },
+  visitaKpiLabel: {
+    fontWeight: '600',
+  },
+  proximasContainer: {
+    gap: 10,
+    marginBottom: 24,
+  },
+  proximaCard: {
+    padding: 14,
+    borderRadius: Theme.roundness.md,
+    borderWidth: 1,
+  },
+  proximaCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  estadoPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: Theme.roundness.full,
+  },
+  estadoPillText: {
+    fontWeight: '700',
+  },
+  proximaFecha: {
+    fontWeight: '700',
+  },
+  proximaMotivo: {
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  proximaFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  proximaMetaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    flex: 1,
+  },
+  proximaMetaText: {
+    fontWeight: '500',
+  },
+  emptyVisitasCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    borderRadius: Theme.roundness.md,
+    borderWidth: 1,
+    marginBottom: 24,
+  },
+  emptyIconCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyVisitaTitle: {
+    fontWeight: '700',
+  },
+  emptyVisitaSub: {
+    marginTop: 2,
+    lineHeight: 16,
+  },
 });

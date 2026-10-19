@@ -7,27 +7,30 @@ import {
   Image,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { useAccesibilidad } from '../contexts/AccesibilidadContext';
 import { useDiagnosticoStore } from '../store/useDiagnosticoStore';
+import { visitaService } from '../services/visitaService';
 import {
   CameraIcon,
   ImageIcon,
   SparklesIcon,
   CacaoIcon,
+  CheckIcon,
 } from '../components/Icons';
 import { CultivIALogo } from '../components/CultivIALogo';
 
-export const CamaraScreen = ({ navigation }: any) => {
+export const CamaraScreen = ({ navigation, route }: any) => {
+  const visitaId = route?.params?.visitaId;
+  const loteId = route?.params?.loteId;
+  const [subiendoAVisita, setSubiendoAVisita] = useState(false);
   const { escalaTexto, colores, botonesGrandes } = useAccesibilidad();
   const {
     currentImageUri,
     setCurrentImageUri,
-    modoSimulacion,
-    setModoSimulacion,
-    ejecutarAnalisis,
   } = useDiagnosticoStore();
 
   const [localImage, setLocalImage] = useState<string | null>(currentImageUri);
@@ -88,6 +91,41 @@ export const CamaraScreen = ({ navigation }: any) => {
     }
   };
 
+  // Vincular fotografía a la visita técnica activa
+  const handleVincularAVisita = async () => {
+    if (!localImage) {
+      Alert.alert('Atención', 'Por favor primero toma o selecciona una imagen de la mazorca.');
+      return;
+    }
+    if (!visitaId) return;
+
+    try {
+      setSubiendoAVisita(true);
+      await visitaService.subirImagen(visitaId, localImage, loteId);
+      Alert.alert(
+        'Foto Vinculada',
+        'La evidencia fotográfica ha sido asociada con éxito al expediente de la visita técnica.',
+        [
+          {
+            text: 'Volver a la Visita en Campo',
+            onPress: () => {
+              navigation.navigate('Visitas', {
+                screen: 'VisitaEnCurso',
+                params: { visitaId },
+              });
+            },
+          },
+          { text: 'Tomar Otra', style: 'cancel' },
+        ]
+      );
+    } catch (err: any) {
+      const msg = err?.response?.data?.mensaje || err?.mensaje || 'No se pudo subir la foto.';
+      Alert.alert('Error al subir foto', msg);
+    } finally {
+      setSubiendoAVisita(false);
+    }
+  };
+
   // Iniciar flujo de envío a la Red Neuronal
   const iniciarAnalisisIA = async () => {
     if (!localImage) {
@@ -101,6 +139,18 @@ export const CamaraScreen = ({ navigation }: any) => {
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={[styles.container, { backgroundColor: colores.background }]}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Banner de contexto de visita técnica */}
+        {visitaId && (
+          <View style={styles.visitaBanner}>
+            <Text style={[styles.visitaBannerTitle, { fontSize: getScaledFont(14) }]}>
+              📸 Modo Visita Técnica Activa
+            </Text>
+            <Text style={[styles.visitaBannerSub, { fontSize: getScaledFont(12) }]}>
+              Las fotografías que captures se pueden vincular directamente al informe de campo de esta visita.
+            </Text>
+          </View>
+        )}
+
         {/* Header */}
         <View style={styles.header}>
           <View style={[styles.logoBadge, { backgroundColor: colores.surfaceContainer }]}>
@@ -180,49 +230,34 @@ export const CamaraScreen = ({ navigation }: any) => {
           </TouchableOpacity>
         </View>
 
-        {/* Modo de prueba agronómico / simulación opcional */}
-        <View style={[styles.modoCard, { backgroundColor: colores.surfaceContainer, borderColor: colores.outlineVariant }]}>
-          <Text style={[styles.modoCardTitle, { fontSize: getScaledFont(13), color: colores.onSurfaceVariant }]}>
-            SELECCIÓN DE CASO DE PRUEBA EN CAMPO:
-          </Text>
-          <View style={styles.chipContainer}>
-            <TouchableOpacity
-              style={[
-                styles.chip,
-                modoSimulacion === 'AUTO' && { backgroundColor: colores.primary },
-              ]}
-              onPress={() => setModoSimulacion('AUTO')}
-            >
-              <Text style={[styles.chipText, modoSimulacion === 'AUTO' && { color: '#ffffff' }]}>
-                Auto (IA)
-              </Text>
-            </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[
-                styles.chip,
-                modoSimulacion === 'ENFERMA' && { backgroundColor: '#ba1a1a' },
-              ]}
-              onPress={() => setModoSimulacion('ENFERMA')}
-            >
-              <Text style={[styles.chipText, modoSimulacion === 'ENFERMA' && { color: '#ffffff' }]}>
-                Moniliasis
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.chip,
-                modoSimulacion === 'SANA' && { backgroundColor: '#2d5a27' },
-              ]}
-              onPress={() => setModoSimulacion('SANA')}
-            >
-              <Text style={[styles.chipText, modoSimulacion === 'SANA' && { color: '#ffffff' }]}>
-                Mazorca Sana
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+        {/* Botón de Vincular a Visita Técnica (cuando se ingresó con contexto de visita) */}
+        {localImage && visitaId && (
+          <TouchableOpacity
+            style={[
+              styles.actionSubmitBtn,
+              {
+                backgroundColor: '#15803d',
+                minHeight: botonesGrandes ? 60 : 54,
+                marginBottom: 12,
+              },
+            ]}
+            onPress={handleVincularAVisita}
+            disabled={subiendoAVisita}
+            activeOpacity={0.85}
+          >
+            {subiendoAVisita ? (
+              <ActivityIndicator size="small" color="#ffffff" />
+            ) : (
+              <>
+                <CheckIcon color="#ffffff" size={22} />
+                <Text style={[styles.actionSubmitBtnText, { fontSize: getScaledFont(17) }]}>
+                  Vincular a la Visita Técnica
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
+        )}
 
         {/* Botón Principal de Envío a la Red Neuronal */}
         {localImage && (
@@ -250,6 +285,23 @@ export const CamaraScreen = ({ navigation }: any) => {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  visitaBanner: {
+    backgroundColor: '#f0fdf4',
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 16,
+  },
+  visitaBannerTitle: {
+    fontWeight: '700',
+    color: '#15803d',
+  },
+  visitaBannerSub: {
+    marginTop: 2,
+    color: '#166534',
+    lineHeight: 16,
+  },
   scrollContent: { paddingHorizontal: 24, paddingBottom: 40, paddingTop: 12 },
   header: {
     flexDirection: 'row',

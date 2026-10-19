@@ -8,10 +8,10 @@ import { useExpertosStore } from '../store/useExpertosStore';
 import { usePerfilStore } from '../store/usePerfilStore';
 import { useAccesibilidad } from '../contexts/AccesibilidadContext';
 import { 
-  MenuIcon, SearchIcon, StarIcon, CameraIcon, ChevronRightIcon 
+  ArrowLeftIcon, SearchIcon, StarIcon, CameraIcon, ChevronRightIcon, WhatsAppIcon 
 } from '../components/Icons';
 import { ExpertosListSkeleton } from '../components/SkeletonLoader';
-import { DrawerMenuModal } from '../components/DrawerMenuModal';
+import { abrirWhatsApp } from '../utils/whatsapp';
 
 export const ChatExpertoScreen = ({ route, navigation }: any) => {
   const { expertos, especialidades, loading, fetchExpertos, fetchEspecialidades, iniciarChat } = useExpertosStore();
@@ -51,59 +51,25 @@ export const ChatExpertoScreen = ({ route, navigation }: any) => {
   };
 
   const handleStartChat = async (expertoId: string, nombre: string, disponible: boolean, tiempoEspera: number | null) => {
-    if (!disponible) {
-      Alert.alert(
-        'Asesor Ocupado',
-        `El Ing. ${nombre} se encuentra en asesoría actualmente. El tiempo de espera estimado es de ${tiempoEspera || 15} minutos. ¿Deseas encolar tu consulta?`,
-        [
-          { text: 'Cancelar', style: 'cancel' },
-          { 
-            text: 'Encolar consulta', 
-            onPress: () => Alert.alert('Consulta encolada', 'Te notificaremos en cuanto el experto esté libre.') 
-          }
-        ]
-      );
-      return;
+    let msg = `Hola Ing. ${nombre}, le escribo desde CacaoScan solicitando asesoría técnica agronómica para mi cultivo de cacao.`;
+    if (diagnosticoAdjunto?.enfermedadDetectada) {
+      msg += ` En mi última evaluación se detectó posible ${diagnosticoAdjunto.enfermedadDetectada}.`;
     }
-
-    try {
-      await iniciarChat(expertoId);
-      Alert.alert(
-        '¡Chat Iniciado!',
-        `Te has conectado con el Ing. ${nombre}. Ya puedes enviarle tus dudas sobre tu cultivo.`
-      );
-    } catch (err: any) {
-      if (err.response?.status === 423 || err.error === 'experto_no_disponible') {
-        const wait = err.tiempoEspera || 15;
-        Alert.alert(
-          'No Disponible',
-          `El experto no está disponible. Tiempo de espera estimado: ${wait} minutos.`
-        );
-      } else {
-        Alert.alert('Error', 'No se pudo iniciar el chat en este momento.');
-      }
-    }
+    await abrirWhatsApp('3101234567', msg);
   };
 
   const getScaledFont = (size: number) => size * escalaTexto;
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={[styles.container, { backgroundColor: colores.background }]}>
-      <DrawerMenuModal 
-        visible={menuVisible} 
-        onClose={() => setMenuVisible(false)} 
-        navigation={navigation} 
-        currentRoute="ChatExperto" 
-      />
-
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity 
           style={[styles.headerBtn, { backgroundColor: colores.surfaceContainer }]}
-          onPress={() => setMenuVisible(true)}
-          accessibilityLabel="Abrir menú de navegación"
+          onPress={() => navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Inicio')}
+          accessibilityLabel="Volver a la pantalla anterior"
         >
-          <MenuIcon color={colores.primary} size={24} />
+          <ArrowLeftIcon color={colores.primary} size={22} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { fontSize: getScaledFont(18), color: colores.onSurface }]}>
           Asesoría Técnica
@@ -237,21 +203,27 @@ export const ChatExpertoScreen = ({ route, navigation }: any) => {
                       style={[
                         styles.chatBtn,
                         { 
-                          backgroundColor: exp.disponible ? colores.primary : '#ffd7ce',
+                          backgroundColor: '#25D366',
                           height: botonesGrandes ? 52 : 36,
                           borderRadius: botonesGrandes ? 26 : 18,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 6,
+                          paddingHorizontal: 14,
                         }
                       ]}
                       onPress={() => handleStartChat(exp.id, exp.nombre, exp.disponible, exp.tiempoEspera)}
+                      accessibilityLabel={`Contactar al Ing. ${exp.nombre} por WhatsApp`}
                     >
+                      <WhatsAppIcon color="#ffffff" size={16} />
                       <Text 
                         style={[
                           styles.chatBtnText, 
-                          { fontSize: getScaledFont(13) },
-                          exp.disponible ? { color: '#ffffff', fontWeight: '700' } : { color: '#755750', fontWeight: '700' }
+                          { fontSize: getScaledFont(13), color: '#ffffff', fontWeight: '700' }
                         ]}
                       >
-                        {exp.disponible ? 'Iniciar Chat' : 'Encolar'}
+                        WhatsApp
                       </Text>
                     </TouchableOpacity>
                   </View>

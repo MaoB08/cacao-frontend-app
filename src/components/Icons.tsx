@@ -411,7 +411,6 @@ export const SparklesIcon = ({ color = '#ffffff', size = 20 }: IconProps) => (
     <Path d="M19 17v4" />
   </Svg>
 );
-
 export const ImageIcon = ({ color = '#755750', size = 20 }: IconProps) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <Rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
@@ -419,6 +418,36 @@ export const ImageIcon = ({ color = '#755750', size = 20 }: IconProps) => (
     <Path d="m21 15-5-5L5 21" />
   </Svg>
 );
+
+export const CalendarIcon = ({ color = '#755750', size = 20 }: IconProps) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <Rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+    <Path d="M16 2v4" />
+    <Path d="M8 2v4" />
+    <Path d="M3 10h18" />
+  </Svg>
+);
+
+export const ClockIcon = ({ color = '#755750', size = 20 }: IconProps) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <Circle cx="12" cy="12" r="10" />
+    <Path d="M12 6v6l4 2" />
+  </Svg>
+);
+
+export const PlusIcon = ({ color = '#755750', size = 20 }: IconProps) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M12 5v14" />
+    <Path d="M5 12h14" />
+  </Svg>
+);
+
+export const WhatsAppIcon = ({ color = '#25D366', size = 20 }: IconProps) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
+    <Path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91C2.13 13.66 2.59 15.36 3.45 16.86L2.05 22L7.3 20.63C8.75 21.41 10.38 21.83 12.04 21.83C17.5 21.83 21.95 17.38 21.95 11.92C21.95 9.27 20.92 6.78 19.05 4.91C17.18 3.04 14.69 2 12.04 2M12.05 3.67C14.25 3.67 16.31 4.53 17.87 6.09C19.42 7.65 20.28 9.72 20.28 11.92C20.28 16.46 16.58 20.15 12.04 20.15C10.56 20.15 9.11 19.76 7.85 19L7.55 18.83L4.43 19.65L5.26 16.61L5.06 16.29C4.24 15 3.8 13.47 3.8 11.91C3.81 7.37 7.5 3.67 12.05 3.67M9.04 7.22C8.84 7.22 8.52 7.3 8.25 7.59C7.98 7.88 7.21 8.62 7.21 10.12C7.21 11.62 8.3 13.06 8.45 13.27C8.6 13.47 10.58 16.53 13.63 17.84C14.36 18.16 14.93 18.35 15.37 18.49C16.1 18.72 16.77 18.69 17.3 18.61C17.89 18.52 19.11 17.87 19.36 17.16C19.61 16.46 19.61 15.86 19.53 15.73C19.46 15.6 19.26 15.53 18.96 15.38C18.66 15.23 17.19 14.51 16.91 14.41C16.64 14.31 16.44 14.26 16.24 14.56C16.04 14.85 15.47 15.53 15.3 15.73C15.13 15.93 14.95 15.95 14.65 15.8C14.36 15.65 13.41 15.34 12.28 14.33C11.4 13.55 10.8 12.59 10.63 12.3C10.46 12 10.61 11.84 10.76 11.69C10.9 11.55 11.07 11.33 11.22 11.16C11.37 10.98 11.42 10.86 11.52 10.66C11.62 10.46 11.57 10.29 11.5 10.14C11.42 10 10.85 8.59 10.61 8.01C10.38 7.45 10.14 7.53 9.96 7.52C9.79 7.51 9.59 7.51 9.39 7.51C9.28 7.51 9.15 7.37 9.04 7.22Z" />
+  </Svg>
+);
+
 
 
 

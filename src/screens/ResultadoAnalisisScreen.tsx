@@ -20,30 +20,74 @@ import {
   HistoryIcon,
   ShareIcon,
   SparklesIcon,
+  CameraIcon,
 } from '../components/Icons';
+import { resolveMediaUrl } from '../utils/mediaUtils';
 
 export const ResultadoAnalisisScreen = ({ route, navigation }: any) => {
   const { colores, escalaTexto, botonesGrandes } = useAccesibilidad();
-  const { currentDiagnosis, guardarEnHistorial } = useDiagnosticoStore();
+  const { currentDiagnosis, currentImageUri, guardarEnHistorial } = useDiagnosticoStore();
 
   const [guardado, setGuardado] = useState(false);
 
   // Recibir diagnóstico desde parámetros de navegación o del Store
-  const diagnostico: DiagnosticoResult = route.params?.diagnostico || currentDiagnosis || {
-    imagenUrl: 'https://images.unsplash.com/photo-1587132137056-bfbf0166836e?auto=format&fit=crop&q=80&w=800',
-    tieneEnfermedad: true,
-    nombreEnfermedad: 'Moniliasis del Cacao',
-    nombreCientifico: 'Moniliophthora roreri',
-    confianza: '96.8%',
-    severidad: 'Alta (75%)',
-    recomendaciones: [
-      { id: '1', tipo: 'rojo', titulo: 'Retirar fruto afectado', descripcion: 'Corte el fruto con herramientas desinfectadas.' },
-      { id: '2', tipo: 'naranja', titulo: 'Enterrar bajo hojarasca', descripcion: 'Evite la dispersión de esporas en el suelo.' },
-      { id: '3', tipo: 'cafe', titulo: 'Contactar experto', descripcion: 'Reciba asesoría técnica especializada.' },
-    ],
-  };
+  const diagnostico: DiagnosticoResult | null = route.params?.diagnostico || currentDiagnosis;
+
+  const localUri = route.params?.imageUri || currentImageUri;
+  const remoteUri = resolveMediaUrl(diagnostico?.imagenUrl);
+
+  const esLocalValida = (uri?: string | null) =>
+    !!uri && (
+      uri.startsWith('file:') ||
+      uri.startsWith('content:') ||
+      uri.startsWith('data:') ||
+      uri.startsWith('blob:')
+    );
+
+  // Si tenemos la imagen local capturada hace instantes en el dispositivo, la usamos de inmediato.
+  // Si no (ej. abierto desde historial o dashboard), usamos la remota resuelta.
+  const [imageUriDisplay, setImageUriDisplay] = useState<string>(() => {
+    if (esLocalValida(localUri)) return localUri!;
+    if (remoteUri) return remoteUri;
+    return localUri || '';
+  });
+  const [imageError, setImageError] = useState(false);
+
+  React.useEffect(() => {
+    const loc = route.params?.imageUri || currentImageUri;
+    const rem = resolveMediaUrl(diagnostico?.imagenUrl);
+    if (esLocalValida(loc)) {
+      setImageUriDisplay(loc!);
+      setImageError(false);
+    } else if (rem) {
+      setImageUriDisplay(rem);
+      setImageError(false);
+    } else if (loc) {
+      setImageUriDisplay(loc);
+      setImageError(false);
+    }
+  }, [diagnostico?.imagenUrl, route.params?.imageUri, currentImageUri]);
 
   const getScaledFont = (size: number) => size * escalaTexto;
+
+  if (!diagnostico) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colores.background, justifyContent: 'center', alignItems: 'center', padding: 24 }]}>
+        <Text style={{ fontSize: getScaledFont(18), fontWeight: '700', color: colores.onSurface, textAlign: 'center', marginBottom: 12 }}>
+          No se encontró un diagnóstico activo
+        </Text>
+        <Text style={{ fontSize: getScaledFont(14), color: colores.onSurfaceVariant, textAlign: 'center', marginBottom: 24 }}>
+          Tome una fotografía de una mazorca para iniciar el análisis con la red neuronal.
+        </Text>
+        <TouchableOpacity
+          style={[styles.primaryActionBtn, { backgroundColor: '#154212', paddingHorizontal: 32, minHeight: 48 }]}
+          onPress={() => navigation.navigate('CamaraMain')}
+        >
+          <Text style={[styles.primaryActionText, { fontSize: getScaledFont(15) }]}>Ir a la cámara</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
 
   // Guardar Diagnóstico en la BD
   const handleGuardarHistorial = async () => {
@@ -91,11 +135,30 @@ export const ResultadoAnalisisScreen = ({ route, navigation }: any) => {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Imagen del Análisis (Ancho Completo) */}
         <View style={styles.imageContainer}>
-          <Image
-            source={{ uri: diagnostico.imagenUrl }}
-            style={styles.fullWidthImage}
-            resizeMode="cover"
-          />
+          {imageUriDisplay && !imageError ? (
+            <Image
+              source={{ uri: imageUriDisplay }}
+              style={styles.fullWidthImage}
+              resizeMode="cover"
+              onError={() => {
+                // Si la local falló, intentar la remota
+                if (imageUriDisplay === localUri && remoteUri && remoteUri !== localUri) {
+                  setImageUriDisplay(remoteUri);
+                } else if (imageUriDisplay === remoteUri && localUri && localUri !== remoteUri) {
+                  setImageUriDisplay(localUri);
+                } else {
+                  setImageError(true);
+                }
+              }}
+            />
+          ) : (
+            <View style={styles.placeholderImageContainer}>
+              <CameraIcon color="#ffffff" size={48} />
+              <Text style={styles.placeholderImageText}>
+                {diagnostico?.nombreEnfermedad || 'Mazorca de Cacao Analizada'}
+              </Text>
+            </View>
+          )}
 
           {/* Badge Sobre la Imagen (Esquina Superior Izquierda) */}
           <View style={styles.iaBadge}>
@@ -120,8 +183,13 @@ export const ResultadoAnalisisScreen = ({ route, navigation }: any) => {
                 </Text>
               </View>
 
-              {/* Badge de Alerta a la derecha en caso de enfermedad */}
-              {diagnostico.tieneEnfermedad ? (
+              {/* Badge de Estado: No concluyente, Alerta o Buen Estado */}
+              {!diagnostico.concluyente ? (
+                <View style={styles.nonConclusiveBadge}>
+                  <AlertTriangleIcon color="#b45309" size={16} />
+                  <Text style={styles.nonConclusiveBadgeText}>No concluyente</Text>
+                </View>
+              ) : diagnostico.tieneEnfermedad ? (
                 <View style={styles.alertBadge}>
                   <AlertTriangleIcon color="#ba1a1a" size={16} />
                   <Text style={styles.alertBadgeText}>Alerta</Text>
@@ -246,6 +314,16 @@ export const ResultadoAnalisisScreen = ({ route, navigation }: any) => {
               </Text>
             </TouchableOpacity>
           </View>
+
+          {/* Trazabilidad del Modelo */}
+          {diagnostico.modelVersion && (
+            <View style={styles.modelVersionContainer}>
+              <Text style={[styles.modelVersionText, { fontSize: getScaledFont(11), color: colores.outline }]}>
+                Red Neuronal: {diagnostico.modelVersion}
+                {diagnostico.codigoClase ? ` • Clase: ${diagnostico.codigoClase}` : ''}
+              </Text>
+            </View>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -278,7 +356,23 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 400,
     position: 'relative',
-    backgroundColor: '#000',
+    backgroundColor: '#1b2319',
+  },
+  placeholderImageContainer: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#154212',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  placeholderImageText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '700',
+    marginTop: 12,
+    textAlign: 'center',
+    fontFamily: 'Montserrat',
   },
   fullWidthImage: {
     width: '100%',
@@ -481,5 +575,30 @@ const styles = StyleSheet.create({
   secondaryActionText: {
     fontWeight: '800',
     fontFamily: 'Montserrat',
+  },
+  nonConclusiveBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fef3c7',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: '#fde68a',
+  },
+  nonConclusiveBadgeText: {
+    color: '#92400e',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  modelVersionContainer: {
+    marginTop: 20,
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  modelVersionText: {
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
 });

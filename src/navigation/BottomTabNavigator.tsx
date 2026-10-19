@@ -1,18 +1,24 @@
 import React from 'react';
-import { StyleSheet, View, Platform } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useAuthStore } from '../store/useAuthStore';
 import { Theme } from '../constants/theme';
 import {
-  HomeIcon, CameraIcon, MapIcon, ProfileIcon, DollarIcon,
+  HomeIcon,
+  CameraIcon,
+  MapIcon,
+  ProfileIcon,
+  DollarIcon,
+  CalendarIcon,
 } from '../components/Icons';
 
 import { DashboardAgricultorScreen } from '../screens/DashboardAgricultorScreen';
-import { DashboardExpertoScreen } from '../screens/DashboardExpertoScreen';
+import { DashboardAgronomoScreen } from '../screens/DashboardAgronomoScreen';
 import { PagosVentasScreen } from '../screens/PagosVentasScreen';
 import { PerfilStackNavigator } from './PerfilStackNavigator';
 import { CamaraStackNavigator } from './CamaraStackNavigator';
 import { MapaStackNavigator } from './MapaStackNavigator';
+import { VisitasStackNavigator } from './VisitasStackNavigator';
 
 import { useShallow } from 'zustand/react/shallow';
 import { useAccesibilidad } from '../contexts/AccesibilidadContext';
@@ -32,39 +38,127 @@ export const BottomTabNavigator = () => {
   const bottomPadding = insets.bottom > 0 ? insets.bottom : 12;
   const tabBarHeight = 60 + bottomPadding;
 
+  const screenOptions = {
+    headerShown: false,
+    tabBarStyle: [
+      styles.tabBar,
+      {
+        backgroundColor: colores.surfaceContainerLowest,
+        borderTopColor: colores.outlineVariant,
+        height: tabBarHeight,
+        paddingBottom: bottomPadding,
+      },
+    ],
+    tabBarActiveTintColor: colores.primary,
+    tabBarInactiveTintColor: colores.outline,
+    tabBarLabelStyle: [
+      styles.tabLabel,
+      {
+        fontSize: 10 * escalaTexto,
+      },
+    ],
+    tabBarItemStyle: styles.tabItem,
+  };
+
+  if (isExperto) {
+    return (
+      <Tab.Navigator screenOptions={screenOptions}>
+        <Tab.Screen
+          name="Inicio"
+          component={DashboardAgronomoScreen}
+          options={{
+            tabBarIcon: ({ color, focused }) => (
+              <View
+                style={[
+                  styles.iconWrapper,
+                  focused && [
+                    styles.activeIconWrapper,
+                    { backgroundColor: colores.primary, shadowColor: colores.primary },
+                  ],
+                ]}
+              >
+                <HomeIcon color={focused ? '#ffffff' : color} size={20} />
+              </View>
+            ),
+          }}
+        />
+        <Tab.Screen
+          name="Cámara"
+          component={CamaraStackNavigator}
+          options={{
+            tabBarIcon: ({ color, focused }) => (
+              <View
+                style={[
+                  styles.iconWrapper,
+                  focused && [
+                    styles.activeIconWrapper,
+                    { backgroundColor: colores.primary, shadowColor: colores.primary },
+                  ],
+                ]}
+              >
+                <CameraIcon color={focused ? '#ffffff' : color} size={20} />
+              </View>
+            ),
+          }}
+        />
+        <Tab.Screen
+          name="Visitas"
+          component={VisitasStackNavigator}
+          options={{
+            tabBarIcon: ({ color, focused }) => (
+              <View
+                style={[
+                  styles.iconWrapper,
+                  focused && [
+                    styles.activeIconWrapper,
+                    { backgroundColor: colores.primary, shadowColor: colores.primary },
+                  ],
+                ]}
+              >
+                <CalendarIcon color={focused ? '#ffffff' : color} size={20} />
+              </View>
+            ),
+          }}
+        />
+
+        <Tab.Screen
+          name="Perfil"
+          component={PerfilStackNavigator}
+          options={{
+            tabBarIcon: ({ color, focused }) => (
+              <View
+                style={[
+                  styles.iconWrapper,
+                  focused && [
+                    styles.activeIconWrapper,
+                    { backgroundColor: colores.primary, shadowColor: colores.primary },
+                  ],
+                ]}
+              >
+                <ProfileIcon color={focused ? '#ffffff' : color} size={20} />
+              </View>
+            ),
+          }}
+        />
+      </Tab.Navigator>
+    );
+  }
+
+  // Navegación original del agricultor (intacta)
   return (
-    <Tab.Navigator
-      screenOptions={{
-        headerShown: false,
-        tabBarStyle: [
-          styles.tabBar,
-          {
-            backgroundColor: colores.surfaceContainerLowest,
-            borderTopColor: colores.outlineVariant,
-            height: tabBarHeight,
-            paddingBottom: bottomPadding,
-          }
-        ],
-        tabBarActiveTintColor: colores.primary,
-        tabBarInactiveTintColor: colores.outline,
-        tabBarLabelStyle: [
-          styles.tabLabel,
-          {
-            fontSize: 10 * escalaTexto,
-          }
-        ],
-        tabBarItemStyle: styles.tabItem,
-      }}
-    >
+    <Tab.Navigator screenOptions={screenOptions}>
       <Tab.Screen
         name="Casa"
-        component={isExperto ? DashboardExpertoScreen : DashboardAgricultorScreen}
+        component={DashboardAgricultorScreen}
         options={{
           tabBarIcon: ({ color, focused }) => (
-            <View 
+            <View
               style={[
-                styles.iconWrapper, 
-                focused && [styles.activeIconWrapper, { backgroundColor: colores.primary, shadowColor: colores.primary }]
+                styles.iconWrapper,
+                focused && [
+                  styles.activeIconWrapper,
+                  { backgroundColor: colores.primary, shadowColor: colores.primary },
+                ],
               ]}
             >
               <HomeIcon color={focused ? '#ffffff' : color} size={20} />
@@ -77,10 +171,13 @@ export const BottomTabNavigator = () => {
         component={CamaraStackNavigator}
         options={{
           tabBarIcon: ({ color, focused }) => (
-            <View 
+            <View
               style={[
-                styles.iconWrapper, 
-                focused && [styles.activeIconWrapper, { backgroundColor: colores.primary, shadowColor: colores.primary }]
+                styles.iconWrapper,
+                focused && [
+                  styles.activeIconWrapper,
+                  { backgroundColor: colores.primary, shadowColor: colores.primary },
+                ],
               ]}
             >
               <CameraIcon color={focused ? '#ffffff' : color} size={20} />
@@ -93,10 +190,13 @@ export const BottomTabNavigator = () => {
         component={MapaStackNavigator}
         options={{
           tabBarIcon: ({ color, focused }) => (
-            <View 
+            <View
               style={[
-                styles.iconWrapper, 
-                focused && [styles.activeIconWrapper, { backgroundColor: colores.primary, shadowColor: colores.primary }]
+                styles.iconWrapper,
+                focused && [
+                  styles.activeIconWrapper,
+                  { backgroundColor: colores.primary, shadowColor: colores.primary },
+                ],
               ]}
             >
               <MapIcon color={focused ? '#ffffff' : color} size={20} />
@@ -109,10 +209,13 @@ export const BottomTabNavigator = () => {
         component={PagosVentasScreen}
         options={{
           tabBarIcon: ({ color, focused }) => (
-            <View 
+            <View
               style={[
-                styles.iconWrapper, 
-                focused && [styles.activeIconWrapper, { backgroundColor: colores.primary, shadowColor: colores.primary }]
+                styles.iconWrapper,
+                focused && [
+                  styles.activeIconWrapper,
+                  { backgroundColor: colores.primary, shadowColor: colores.primary },
+                ],
               ]}
             >
               <DollarIcon color={focused ? '#ffffff' : color} size={20} />
@@ -125,10 +228,13 @@ export const BottomTabNavigator = () => {
         component={PerfilStackNavigator}
         options={{
           tabBarIcon: ({ color, focused }) => (
-            <View 
+            <View
               style={[
-                styles.iconWrapper, 
-                focused && [styles.activeIconWrapper, { backgroundColor: colores.primary, shadowColor: colores.primary }]
+                styles.iconWrapper,
+                focused && [
+                  styles.activeIconWrapper,
+                  { backgroundColor: colores.primary, shadowColor: colores.primary },
+                ],
               ]}
             >
               <ProfileIcon color={focused ? '#ffffff' : color} size={20} />

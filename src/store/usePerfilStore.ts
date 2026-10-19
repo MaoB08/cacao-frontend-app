@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { api } from '../services/api';
 import { useAuthStore } from './useAuthStore';
 import { biometricService } from '../services/biometricService';
+import { resolveMediaUrl } from '../utils/mediaUtils';
 
 export interface FincaInfo {
   nombre: string;
@@ -39,15 +40,7 @@ interface PerfilState {
 }
 
 const sanitizeUrl = (url: string | null): string | null => {
-  if (!url) return null;
-  if (url.includes('localhost:8080')) {
-    const apiBase = api.defaults.baseURL || '';
-    const hostMatch = /^(https?:\/\/[^\/]+)/.exec(apiBase);
-    if (hostMatch) {
-      return url.replace('http://localhost:8080', hostMatch[1]);
-    }
-  }
-  return url;
+  return resolveMediaUrl(url);
 };
 
 export const usePerfilStore = create<PerfilState>((set, get) => ({

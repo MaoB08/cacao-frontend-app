@@ -1,15 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet, Text, View, ScrollView, SafeAreaView, TouchableOpacity,
-  ActivityIndicator, RefreshControl, Platform,
+  ActivityIndicator, RefreshControl, Platform, Image,
 } from 'react-native';
 import { useAuthStore } from '../store/useAuthStore';
 import { api } from '../services/api';
 import { Theme } from '../constants/theme';
 import {
-  AlertTriangleIcon, UsersIcon, ClipboardIcon, ActivityIcon,
+  AlertTriangleIcon, UsersIcon, ClipboardIcon, ActivityIcon, CameraIcon,
 } from '../components/Icons';
 import { useShallow } from 'zustand/react/shallow';
+import { resolveMediaUrl } from '../utils/mediaUtils';
 
 interface DiagnosticoPendiente {
   id: string;
@@ -18,6 +19,7 @@ interface DiagnosticoPendiente {
   enfermedadDetectada: string;
   severidad: string;
   fecha: string;
+  imagenUrl?: string;
 }
 
 interface ExpertoDashboardData {
@@ -32,7 +34,7 @@ const severityColors: Record<string, { bg: string; text: string }> = {
   BAJA: { bg: '#e8f5e9', text: '#2e7d32' },
 };
 
-export const DashboardExpertoScreen = () => {
+export const DashboardExpertoScreen = ({ navigation }: any) => {
   const { user } = useAuthStore(useShallow((s) => ({ user: s.user })));
   const [data, setData] = useState<ExpertoDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -121,23 +123,65 @@ export const DashboardExpertoScreen = () => {
         <Text style={styles.sectionTitle}>Diagnósticos Pendientes de Revisión</Text>
         {d.diagnosticosPendientesRevision.map((item) => {
           const sev = severityColors[item.severidad] || severityColors.MEDIA;
+          const resolvedUri = resolveMediaUrl(item.imagenUrl);
           return (
-            <View key={item.id} style={styles.reviewCard}>
-              <View style={styles.reviewHeader}>
-                <View style={[styles.severityDot, { backgroundColor: sev.text }]} />
-                <Text style={styles.reviewDisease} numberOfLines={1}>{item.enfermedadDetectada}</Text>
-                <View style={[styles.severityBadge, { backgroundColor: sev.bg }]}>
-                  <Text style={[styles.severityText, { color: sev.text }]}>{item.severidad}</Text>
+            <TouchableOpacity
+              key={item.id}
+              activeOpacity={0.8}
+              onPress={() => {
+                if (navigation) {
+                  navigation.navigate('Cámara', {
+                    screen: 'ResultadoAnalisis',
+                    params: {
+                      diagnostico: {
+                        id: item.id,
+                        imagenUrl: resolvedUri || item.imagenUrl || '',
+                        tieneEnfermedad: true,
+                        nombreEnfermedad: item.enfermedadDetectada,
+                        nombreCientifico: item.enfermedadDetectada.toLowerCase().includes('monilia')
+                          ? 'Moniliophthora roreri'
+                          : 'Theobroma cacao L.',
+                        codigoClase: '',
+                        probabilidad: 0.9,
+                        confianza: '90.0%',
+                        severidad: item.severidad,
+                        concluyente: true,
+                        recomendaciones: [],
+                        createdAt: item.fecha,
+                      },
+                      imageUri: resolvedUri || item.imagenUrl || '',
+                    },
+                  });
+                }
+              }}
+              style={styles.reviewCard}
+            >
+              <View style={styles.reviewCardContent}>
+                {resolvedUri ? (
+                  <Image source={{ uri: resolvedUri }} style={styles.reviewThumb} resizeMode="cover" />
+                ) : (
+                  <View style={styles.reviewThumbPlaceholder}>
+                    <CameraIcon color={Theme.colors.outline} size={22} />
+                  </View>
+                )}
+                <View style={styles.reviewDetails}>
+                  <View style={styles.reviewHeader}>
+                    <View style={[styles.severityDot, { backgroundColor: sev.text }]} />
+                    <Text style={styles.reviewDisease} numberOfLines={1}>{item.enfermedadDetectada}</Text>
+                    <View style={[styles.severityBadge, { backgroundColor: sev.bg }]}>
+                      <Text style={[styles.severityText, { color: sev.text }]}>{item.severidad}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.reviewMeta}>
+                    <Text style={styles.reviewMetaText}>👤 {item.agricultor}</Text>
+                    <Text style={styles.reviewMetaText}>🏡 {item.finca}</Text>
+                  </View>
+                  <Text style={styles.reviewDate}>
+                    {new Date(item.fecha).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </Text>
                 </View>
               </View>
-              <View style={styles.reviewMeta}>
-                <Text style={styles.reviewMetaText}>👤 {item.agricultor}</Text>
-                <Text style={styles.reviewMetaText}>🏡 {item.finca}</Text>
-              </View>
-              <Text style={styles.reviewDate}>
-                {new Date(item.fecha).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' })}
-              </Text>
-            </View>
+            </TouchableOpacity>
           );
         })}
       </ScrollView>
@@ -182,8 +226,30 @@ const styles = StyleSheet.create({
 
   reviewCard: {
     backgroundColor: Theme.colors.surfaceContainerLowest, borderRadius: Theme.roundness.default,
-    padding: 16, marginBottom: 12, shadowColor: '#5c403a', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06, shadowRadius: 12, elevation: 3,
+    padding: 14, marginBottom: 12, shadowColor: '#5c403a', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06, shadowRadius: 12, elevation: 3, borderWidth: 1, borderColor: '#e6dedb',
+  },
+  reviewCardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  reviewThumb: {
+    width: 68,
+    height: 68,
+    borderRadius: 10,
+    backgroundColor: Theme.colors.surfaceContainer,
+  },
+  reviewThumbPlaceholder: {
+    width: 68,
+    height: 68,
+    borderRadius: 10,
+    backgroundColor: '#efebe9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reviewDetails: {
+    flex: 1,
   },
   reviewHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   severityDot: { width: 10, height: 10, borderRadius: 5 },

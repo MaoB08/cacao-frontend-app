@@ -86,15 +86,18 @@ export const PantallaCargaScreen = ({ route, navigation }: any) => {
         const result = await ejecutarAnalisis(imageUri);
         setTimeout(() => {
           if (isMounted) {
-            navigation.replace('ResultadoAnalisis', { diagnostico: result });
+            navigation.replace('ResultadoAnalisis', { diagnostico: result, imageUri });
           }
         }, 3200);
-      } catch (err) {
+      } catch (err: any) {
         setTimeout(() => {
           if (isMounted) {
-            navigation.replace('ResultadoAnalisis');
+            navigation.replace('ErrorAnalisis', {
+              errorMessage: err?.response?.data?.message || err?.message || 'El servicio de análisis neuronal no está disponible actualmente.',
+              imageUri,
+            });
           }
-        }, 3200);
+        }, 2000);
       }
     };
     run();

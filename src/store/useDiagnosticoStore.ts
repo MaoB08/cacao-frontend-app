@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { DiagnosticoResult, AnalisisRequestPayload } from '../types/diagnostico';
+import { DiagnosticoResult } from '../types/diagnostico';
 import { diagnosticoService } from '../services/diagnosticoService';
 
 interface DiagnosticoState {
@@ -7,11 +7,11 @@ interface DiagnosticoState {
   currentDiagnosis: DiagnosticoResult | null;
   historial: DiagnosticoResult[];
   isAnalyzing: boolean;
-  modoSimulacion: 'AUTO' | 'ENFERMA' | 'SANA';
-  
+  error: string | null;
+
   setCurrentImageUri: (uri: string | null) => void;
   setCurrentDiagnosis: (diagnosis: DiagnosticoResult | null) => void;
-  setModoSimulacion: (modo: 'AUTO' | 'ENFERMA' | 'SANA') => void;
+  clearError: () => void;
   ejecutarAnalisis: (imageUri: string) => Promise<DiagnosticoResult>;
   guardarEnHistorial: (diagnosis: DiagnosticoResult) => Promise<boolean>;
   cargarHistorial: () => Promise<void>;
@@ -22,24 +22,35 @@ export const useDiagnosticoStore = create<DiagnosticoState>((set, get) => ({
   currentDiagnosis: null,
   historial: [],
   isAnalyzing: false,
-  modoSimulacion: 'AUTO',
+  error: null,
 
   setCurrentImageUri: (uri) => set({ currentImageUri: uri }),
   setCurrentDiagnosis: (diagnosis) => set({ currentDiagnosis: diagnosis }),
-  setModoSimulacion: (modo) => set({ modoSimulacion: modo }),
+  clearError: () => set({ error: null }),
 
   ejecutarAnalisis: async (imageUri) => {
-    set({ isAnalyzing: true, currentImageUri: imageUri });
+    set({ isAnalyzing: true, currentImageUri: imageUri, error: null });
     try {
-      const payload: AnalisisRequestPayload = {
-        imagenUri: imageUri,
-        simulacionTipo: get().modoSimulacion,
+      const result = await diagnosticoService.analizarImagen(imageUri);
+      // Garantizar que la imagen a renderizar tenga una URI válida (local o remota)
+      const tieneUriValida = result.imagenUrl && (
+        result.imagenUrl.startsWith('http://') ||
+        result.imagenUrl.startsWith('https://') ||
+        result.imagenUrl.startsWith('file:') ||
+        result.imagenUrl.startsWith('data:') ||
+        result.imagenUrl.startsWith('content:') ||
+        result.imagenUrl.startsWith('blob:')
+      );
+      const finalResult: DiagnosticoResult = {
+        ...result,
+        imagenUrl: tieneUriValida ? result.imagenUrl : imageUri,
       };
-      const result = await diagnosticoService.analizarImagen(payload);
-      set({ currentDiagnosis: result, isAnalyzing: false });
-      return result;
-    } catch (error) {
-      set({ isAnalyzing: false });
+      set({ currentDiagnosis: finalResult, isAnalyzing: false });
+      return finalResult;
+    } catch (error: any) {
+      const errorMsg = error?.response?.data?.message || error?.message
+        || 'No se pudo analizar la fotografía. Verifique su conexión y el servicio de análisis.';
+      set({ isAnalyzing: false, error: errorMsg });
       throw error;
     }
   },
@@ -57,7 +68,11 @@ export const useDiagnosticoStore = create<DiagnosticoState>((set, get) => ({
   },
 
   cargarHistorial: async () => {
-    const list = await diagnosticoService.obtenerHistorial();
-    set({ historial: list });
+    try {
+      const list = await diagnosticoService.obtenerHistorial();
+      set({ historial: list });
+    } catch (e) {
+      // Mantener historial local si falla la consulta remota
+    }
   },
 }));

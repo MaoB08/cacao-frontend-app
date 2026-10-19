@@ -1,66 +1,72 @@
+import { Platform } from 'react-native';
 import { api } from './api';
-import { DiagnosticoResult, AnalisisRequestPayload } from '../types/diagnostico';
+import { DiagnosticoResult } from '../types/diagnostico';
+import * as FileSystem from 'expo-file-system/legacy';
 
 export const diagnosticoService = {
-  // Enviar imagen a la red neuronal para análisis
-  analizarImagen: async (payload: AnalisisRequestPayload): Promise<DiagnosticoResult> => {
+  /**
+   * Envía la imagen al backend Spring Boot como multipart/form-data.
+   * NO tiene fallback simulado: si el servidor o red falla, se propaga el error
+   * para que la interfaz muestre el estado de error real al usuario.
+   */
+  analizarImagen: async (imageUri: string): Promise<DiagnosticoResult> => {
+    // Validar existencia del archivo si es posible
     try {
-      const response = await api.post<DiagnosticoResult>('/diagnosticos/analizar', payload);
-      return response.data;
-    } catch (error) {
-      console.warn('⚠️ Fallo en red neuronal remota, activando fallback agronómico local:', error);
-      // Fallback si la app está en modo offline o el backend no responde
-      const isHealthy = payload.simulacionTipo === 'SANA';
-      if (isHealthy) {
-        return {
-          imagenUrl: payload.imagenUri,
-          tieneEnfermedad: false,
-          nombreEnfermedad: 'Mazorca Sana',
-          nombreCientifico: 'Theobroma cacao L. (Saludable)',
-          confianza: '98.4%',
-          severidad: 'Nula (0%)',
-          recomendaciones: [
-            { id: '1', tipo: 'verde', titulo: 'Mantener monitoreo periódico', descripcion: 'Inspeccione los frutos semanalmente durante el llenado.' },
-            { id: '2', tipo: 'verde', titulo: 'Buenas prácticas de poda', descripcion: 'Mantenga la aireación del dosel para prevenir humedad.' },
-            { id: '3', tipo: 'cafe', titulo: 'Contactar experto', descripcion: 'Reciba asesoría técnica especializada.' },
-          ],
-        };
+      const fileInfo = await FileSystem.getInfoAsync(imageUri);
+      if (!fileInfo.exists) {
+        throw new Error('El archivo de fotografía no existe en el almacenamiento.');
       }
-      return {
-        imagenUrl: payload.imagenUri,
-        tieneEnfermedad: true,
-        nombreEnfermedad: 'Moniliasis del Cacao',
-        nombreCientifico: 'Moniliophthora roreri',
-        confianza: '96.8%',
-        severidad: 'Alta (75%)',
-        recomendaciones: [
-          { id: '1', tipo: 'rojo', titulo: 'Retirar fruto afectado', descripcion: 'Corte el fruto con herramientas desinfectadas.' },
-          { id: '2', tipo: 'naranja', titulo: 'Enterrar bajo hojarasca', descripcion: 'Evite la dispersión de esporas en el suelo.' },
-          { id: '3', tipo: 'cafe', titulo: 'Contactar experto', descripcion: 'Reciba asesoría técnica especializada.' },
-        ],
-      };
+    } catch (e: any) {
+      if (e?.message?.includes('no existe')) {
+        throw e;
+      }
+      // En web o entornos donde getInfoAsync no aplique, continuar con imageUri
     }
+
+    // Determinar nombre y tipo MIME por extensión
+    const filename = imageUri.split('/').pop()?.split('?')[0] || `mazorca_${Date.now()}.jpg`;
+    const extension = filename.split('.').pop()?.toLowerCase() || 'jpg';
+    const mimeType = extension === 'png' ? 'image/png'
+                   : extension === 'webp' ? 'image/webp'
+                   : 'image/jpeg';
+
+    const cleanUri = Platform.OS === 'ios' ? imageUri.replace('file://', '') : imageUri;
+
+    // React Native FormData con especificación de archivo
+    const formData = new FormData();
+    formData.append('imagen', {
+      uri: cleanUri,
+      name: filename,
+      type: mimeType,
+    } as any);
+
+    const response = await api.post<DiagnosticoResult>(
+      '/diagnosticos/analizar',
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        timeout: 60000, // 60s para inferencia y transferencia
+      }
+    );
+
+    return response.data;
   },
 
-  // Guardar diagnóstico en historial de base de datos
+  /**
+   * Guarda el diagnóstico en el historial del servidor.
+   */
   guardarDiagnostico: async (diagnostico: DiagnosticoResult): Promise<DiagnosticoResult> => {
-    try {
-      const response = await api.post<DiagnosticoResult>('/diagnosticos', diagnostico);
-      return response.data;
-    } catch (error) {
-      console.warn('⚠️ No se pudo guardar en el servidor remoto, se mantendrá en almacenamiento local');
-      return diagnostico;
-    }
+    const response = await api.post<DiagnosticoResult>('/diagnosticos', diagnostico);
+    return response.data;
   },
 
-  // Obtener historial de la base de datos
+  /**
+   * Obtiene el historial de diagnósticos del usuario autenticado.
+   */
   obtenerHistorial: async (): Promise<DiagnosticoResult[]> => {
-    try {
-      const response = await api.get<DiagnosticoResult[]>('/diagnosticos');
-      return response.data;
-    } catch (error) {
-      console.warn('⚠️ Error consultando historial de la BD:', error);
-      return [];
-    }
+    const response = await api.get<DiagnosticoResult[]>('/diagnosticos');
+    return response.data;
   },
 };

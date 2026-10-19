@@ -13,6 +13,7 @@
     "expo": "~54.0.37",
     "expo-constants": "~18.0.14",
     "expo-dev-client": "~6.0.21",
+    "expo-file-system": "~19.0.0",
     "expo-image-picker": "~17.0.11",
     "expo-local-authentication": "~17.0.9",
     "expo-location": "~19.0.8",
@@ -39,7 +40,8 @@
     "typescript": "~5.9.2"
   },
   "scripts": {
-    "start": "expo start",
+    "start": "expo start --go",
+    "start:dev-client": "expo start --dev-client",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
